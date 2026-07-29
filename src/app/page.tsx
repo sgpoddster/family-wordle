@@ -38,20 +38,8 @@ export default async function EntryPage() {
 
   return (
     <div className="space-y-12">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Log a score</h1>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Lower is better &mdash; a fail or a missed day counts as{" "}
-            {MISS_SCORE}.
-          </p>
-        </div>
-
-        <ScoreForm players={players} today={today} />
-      </div>
-
-      <div className="space-y-8 border-t border-black/10 dark:border-white/10 pt-8">
-        <h2 className="text-xl font-bold">This week so far</h2>
+      <div className="space-y-8">
+        <h1 className="text-2xl font-bold">This week so far</h1>
         <WeekStats
           standings={standings}
           hasScores={standings.some((s) =>
@@ -60,6 +48,18 @@ export default async function EntryPage() {
           today={today}
           streaks={streaks}
         />
+      </div>
+
+      <div className="space-y-6 border-t border-black/10 dark:border-white/10 pt-8">
+        <div>
+          <h2 className="text-xl font-bold">Log a score</h2>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Lower is better &mdash; a fail or a missed day counts as{" "}
+            {MISS_SCORE}.
+          </p>
+        </div>
+
+        <ScoreForm players={players} today={today} />
       </div>
     </div>
   );
