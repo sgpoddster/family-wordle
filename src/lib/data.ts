@@ -8,6 +8,7 @@ export type Player = {
   id: string;
   name: string;
   active: boolean;
+  avatar_url: string | null;
 };
 
 export type Week = {
@@ -95,18 +96,23 @@ export async function getScoresForWeek(weekId: string): Promise<Score[]> {
 }
 
 export async function getClosedWeeks(): Promise<
-  (Week & { winner_name: string | null })[]
+  (Week & { winner_name: string | null; winner_avatar_url: string | null })[]
 > {
   const { data, error } = await supabase
     .from("weeks")
-    .select("*, winner:winner_player_id(name)")
+    .select("*, winner:winner_player_id(name, avatar_url)")
     .not("end_date", "is", null)
     .order("start_date", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((w) => ({
-    ...w,
-    winner_name: (w as { winner?: { name: string } | null }).winner?.name ?? null,
-  }));
+  type WinnerJoin = { name: string; avatar_url: string | null } | null;
+  return (data ?? []).map((w) => {
+    const winner = (w as { winner?: WinnerJoin }).winner ?? null;
+    return {
+      ...w,
+      winner_name: winner?.name ?? null,
+      winner_avatar_url: winner?.avatar_url ?? null,
+    };
+  });
 }
 
 /** Per-player totals for a week so far: each day from start_date through

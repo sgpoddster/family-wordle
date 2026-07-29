@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Family Wordle Tracker",
+  title: "The Wordle Cup",
   description: "Daily Wordle scores and weekly bragging rights for the family",
 };
 

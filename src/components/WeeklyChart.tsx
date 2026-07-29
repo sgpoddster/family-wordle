@@ -10,17 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { MISS_SCORE } from "@/lib/constants";
-
-const COLORS = [
-  "#6aaa64",
-  "#c9b458",
-  "#3a86ff",
-  "#e07a5f",
-  "#9b5de5",
-  "#f15bb5",
-  "#00bbf9",
-];
+import { MISS_SCORE, colorForKey } from "@/lib/constants";
 
 type Standing = {
   player: { id: string; name: string };
@@ -69,12 +59,12 @@ export default function WeeklyChart({
         />
         <Tooltip />
         <Legend />
-        {standings.map((s, i) => (
+        {standings.map((s) => (
           <Line
             key={s.player.id}
             type="monotone"
             dataKey={s.player.name}
-            stroke={COLORS[i % COLORS.length]}
+            stroke={colorForKey(s.player.name)}
             strokeWidth={2}
             connectNulls
             dot={{ r: 3 }}

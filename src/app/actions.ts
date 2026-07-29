@@ -47,8 +47,50 @@ export async function addPlayer(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name is required");
 
-  const { error } = await supabase.from("players").insert({ name });
+  const { data: player, error } = await supabase
+    .from("players")
+    .insert({ name })
+    .select("id")
+    .single();
   if (error) throw error;
+
+  const photo = formData.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    await uploadAvatarFile(player.id, photo);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/players");
+  revalidatePath("/dashboard");
+}
+
+async function uploadAvatarFile(playerId: string, photo: File) {
+  const ext = photo.name.split(".").pop() || "jpg";
+  const path = `${playerId}-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await photo.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, buffer, { contentType: photo.type, upsert: true });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("avatars").getPublicUrl(path);
+
+  const { error: updateError } = await supabase
+    .from("players")
+    .update({ avatar_url: publicUrl })
+    .eq("id", playerId);
+  if (updateError) throw updateError;
+}
+
+export async function updateAvatar(formData: FormData) {
+  const playerId = String(formData.get("playerId") ?? "");
+  const photo = formData.get("photo");
+  if (!playerId || !(photo instanceof File) || photo.size === 0) return;
+
+  await uploadAvatarFile(playerId, photo);
 
   revalidatePath("/");
   revalidatePath("/players");

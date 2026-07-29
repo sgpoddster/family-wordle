@@ -1,3 +1,4 @@
+import Avatar from "@/components/Avatar";
 import { getClosedWeeks } from "@/lib/data";
 
 export default async function HistoryPage() {
@@ -17,25 +18,29 @@ export default async function HistoryPage() {
           {weeks.map((w) => (
             <li
               key={w.id}
-              className="rounded-md border border-black/10 dark:border-white/10 px-4 py-3"
+              className="flex items-center justify-between rounded-md border border-black/10 dark:border-white/10 px-4 py-3"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-medium">
-                  {formatDate(w.start_date)} &ndash;{" "}
-                  {w.end_date ? formatDate(w.end_date) : "?"}
-                </span>
-                <span className="text-sm">
-                  {w.winner_name ? (
-                    <>
-                      🏆 <span className="font-semibold">{w.winner_name}</span>
-                    </>
-                  ) : (
-                    <span className="text-black/50 dark:text-white/50">
-                      No winner
-                    </span>
-                  )}
-                </span>
-              </div>
+              <span className="font-medium">
+                {formatDate(w.start_date)} &ndash;{" "}
+                {w.end_date ? formatDate(w.end_date) : "?"}
+              </span>
+              <span className="flex items-center gap-2 text-sm">
+                {w.winner_name ? (
+                  <>
+                    <Avatar
+                      name={w.winner_name}
+                      avatarUrl={w.winner_avatar_url}
+                      size={28}
+                    />
+                    <span className="font-semibold">{w.winner_name}</span>
+                    <span className="text-lg">🏆</span>
+                  </>
+                ) : (
+                  <span className="text-black/50 dark:text-white/50">
+                    No winner
+                  </span>
+                )}
+              </span>
             </li>
           ))}
         </ol>

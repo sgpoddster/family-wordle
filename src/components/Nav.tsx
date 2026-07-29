@@ -13,9 +13,9 @@ export default function Nav() {
       <div className="mx-auto flex max-w-3xl items-center gap-6 px-4 py-4">
         <span className="font-bold tracking-tight text-lg">
           <span className="rounded bg-[#6aaa64] px-1.5 py-0.5 text-white mr-1">
-            W
+            🏆
           </span>
-          Family Wordle
+          The Wordle Cup
         </span>
         <nav className="flex gap-4 text-sm">
           {links.map((link) => (

@@ -1,4 +1,7 @@
 import { submitScore } from "@/app/actions";
+import Avatar from "@/components/Avatar";
+import DateField from "@/components/DateField";
+import { colorForKey } from "@/lib/constants";
 import {
   MISS_SCORE,
   getActivePlayers,
@@ -35,7 +38,7 @@ export default async function EntryPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Log today&apos;s score</h1>
+        <h1 className="text-2xl font-bold">Log a score</h1>
         <p className="text-sm text-black/60 dark:text-white/60">
           Lower is better &mdash; a fail or a missed day counts as{" "}
           {MISS_SCORE}.
@@ -43,38 +46,36 @@ export default async function EntryPage() {
       </div>
 
       <form action={submitScore} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="playerId">
+        <fieldset>
+          <legend className="block text-sm font-medium mb-2">
             Who&apos;s playing?
-          </label>
-          <select
-            id="playerId"
-            name="playerId"
-            required
-            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
-          >
-            {players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+          </legend>
+          <div className="flex flex-wrap gap-3">
+            {players.map((p, i) => (
+              <label key={p.id} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="playerId"
+                  value={p.id}
+                  defaultChecked={i === 0}
+                  className="peer sr-only"
+                  required
+                />
+                <div
+                  style={{ "--ring": colorForKey(p.name) } as React.CSSProperties}
+                  className="flex flex-col items-center gap-1 rounded-lg border-2 border-transparent p-2 peer-checked:border-[var(--ring)] peer-checked:bg-black/5 dark:peer-checked:bg-white/10 transition-colors"
+                >
+                  <Avatar name={p.name} avatarUrl={p.avatar_url} size={52} />
+                  <span className="text-xs font-medium max-w-16 truncate">
+                    {p.name}
+                  </span>
+                </div>
+              </label>
             ))}
-          </select>
-        </div>
+          </div>
+        </fieldset>
 
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="playDate">
-            Date
-          </label>
-          <input
-            id="playDate"
-            name="playDate"
-            type="date"
-            defaultValue={today}
-            max={today}
-            required
-            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
-          />
-        </div>
+        <DateField today={today} />
 
         <fieldset>
           <legend className="block text-sm font-medium mb-2">
@@ -91,7 +92,7 @@ export default async function EntryPage() {
                   className="peer sr-only"
                   required
                 />
-                <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#6aaa64] peer-checked:text-white peer-checked:border-[#6aaa64] transition-colors">
+                <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#6aaa64] peer-checked:text-white peer-checked:border-[#6aaa64] peer-checked:scale-105 transition-all">
                   {n}
                 </div>
               </label>
@@ -123,12 +124,15 @@ export default async function EntryPage() {
         <h2 className="text-sm font-medium text-black/60 dark:text-white/60 mb-2">
           Today so far
         </h2>
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-2 text-sm">
           {players.map((p) => {
             const score = todaysScores.get(p.id);
             return (
-              <li key={p.id} className="flex justify-between">
-                <span>{p.name}</span>
+              <li key={p.id} className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Avatar name={p.name} avatarUrl={p.avatar_url} size={28} />
+                  {p.name}
+                </span>
                 <span className="text-black/60 dark:text-white/60">
                   {score
                     ? score.guesses >= MISS_SCORE

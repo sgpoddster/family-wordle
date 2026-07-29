@@ -1,4 +1,5 @@
 import { addPlayer, setPlayerActive } from "@/app/actions";
+import AvatarUpload from "@/components/AvatarUpload";
 import { getAllPlayers } from "@/lib/data";
 
 export default async function PlayersPage() {
@@ -35,10 +36,19 @@ export default async function PlayersPage() {
               key={p.id}
               className="flex items-center justify-between rounded-md border border-black/10 dark:border-white/10 px-4 py-2.5"
             >
-              <span className={p.active ? "" : "text-black/40 dark:text-white/40"}>
-                {p.name}
-                {!p.active && " (inactive)"}
-              </span>
+              <div className="flex items-center gap-3">
+                <AvatarUpload
+                  playerId={p.id}
+                  name={p.name}
+                  avatarUrl={p.avatar_url}
+                />
+                <span
+                  className={p.active ? "" : "text-black/40 dark:text-white/40"}
+                >
+                  {p.name}
+                  {!p.active && " (inactive)"}
+                </span>
+              </div>
               <form action={setPlayerActive.bind(null, p.id, !p.active)}>
                 <button
                   type="submit"
@@ -52,8 +62,8 @@ export default async function PlayersPage() {
         </ul>
       )}
       <p className="text-xs text-black/50 dark:text-white/50">
-        Deactivating hides someone from the entry form and dashboard but keeps
-        their past scores in History.
+        Click a photo to change it. Deactivating hides someone from the entry
+        form and dashboard but keeps their past scores in History.
       </p>
     </div>
   );
