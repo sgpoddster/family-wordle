@@ -6,13 +6,24 @@ import {
   MISS_SCORE,
   addDays,
   computeStandings,
+  computeWeekAwards,
+  computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
   getScoresForWeek,
   todayStr,
 } from "@/lib/data";
 
-export async function submitScore(formData: FormData) {
+export type SubmitScoreResult = {
+  guesses: number;
+  leaderChanged: boolean;
+  newLeaderName: string | null;
+  closeRace: boolean;
+};
+
+export async function submitScore(
+  formData: FormData
+): Promise<SubmitScoreResult> {
   const playerId = String(formData.get("playerId") ?? "");
   const playDate = String(formData.get("playDate") ?? todayStr());
   const guessesRaw = String(formData.get("guesses") ?? "");
@@ -27,6 +38,9 @@ export async function submitScore(formData: FormData) {
   }
 
   const week = await getActiveWeek();
+  const today = todayStr();
+  const players = await getActivePlayers();
+  const before = computeWeekStandings(players, await getScoresForWeek(week.id), today);
 
   const { error } = await supabase.from("scores").upsert(
     {
@@ -41,6 +55,22 @@ export async function submitScore(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/dashboard");
+
+  const after = computeWeekStandings(players, await getScoresForWeek(week.id), today);
+  const beforeLeaderId = before[0]?.player.id ?? null;
+  const afterLeaderId = after[0]?.player.id ?? null;
+  const leaderChanged =
+    afterLeaderId === playerId && beforeLeaderId !== afterLeaderId;
+  const margin = after.length >= 2 ? after[1].total - after[0].total : null;
+
+  return {
+    guesses,
+    leaderChanged,
+    newLeaderName: leaderChanged
+      ? players.find((p) => p.id === afterLeaderId)?.name ?? null
+      : null,
+    closeRace: margin !== null && margin <= 1,
+  };
 }
 
 export async function addPlayer(formData: FormData) {
@@ -117,12 +147,16 @@ export async function endWeek() {
 
   const standings = computeStandings(players, scores, week.start_date, today);
   const winnerId = standings[0]?.player.id ?? null;
+  const awards = computeWeekAwards(standings);
 
   const { error: closeError } = await supabase
     .from("weeks")
     .update({
       end_date: today,
       winner_player_id: winnerId,
+      comeback_player_id: awards.comebackPlayerId,
+      consistent_player_id: awards.consistentPlayerId,
+      margin: awards.margin,
       closed_at: new Date().toISOString(),
     })
     .eq("id", week.id);

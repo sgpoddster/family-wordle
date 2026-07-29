@@ -8,6 +8,9 @@ create table if not exists weeks (
   start_date date not null,
   end_date date,
   winner_player_id uuid,
+  comeback_player_id uuid,
+  consistent_player_id uuid,
+  margin int,
   closed_at timestamptz,
   created_at timestamptz not null default now()
 );
@@ -33,6 +36,16 @@ create table if not exists scores (
 alter table weeks
   add constraint weeks_winner_player_id_fkey
   foreign key (winner_player_id) references players(id)
+  on delete set null;
+
+alter table weeks
+  add constraint weeks_comeback_player_id_fkey
+  foreign key (comeback_player_id) references players(id)
+  on delete set null;
+
+alter table weeks
+  add constraint weeks_consistent_player_id_fkey
+  foreign key (consistent_player_id) references players(id)
   on delete set null;
 
 create index if not exists scores_week_id_idx on scores(week_id);

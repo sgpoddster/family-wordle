@@ -16,7 +16,16 @@ export type Week = {
   start_date: string;
   end_date: string | null;
   winner_player_id: string | null;
+  comeback_player_id: string | null;
+  consistent_player_id: string | null;
+  margin: number | null;
   closed_at: string | null;
+};
+
+export type Standing = {
+  player: Player;
+  daily: { date: string; guesses: number | null }[];
+  total: number;
 };
 
 export type Score = {
@@ -104,24 +113,71 @@ export async function getScoresForWeek(weekId: string): Promise<Score[]> {
   return data ?? [];
 }
 
+type NamedPlayer = { name: string; avatar_url: string | null } | null;
+
 export async function getClosedWeeks(): Promise<
-  (Week & { winner_name: string | null; winner_avatar_url: string | null })[]
+  (Week & {
+    winner_name: string | null;
+    winner_avatar_url: string | null;
+    comeback_name: string | null;
+    consistent_name: string | null;
+  })[]
 > {
+  // The comeback/consistent award columns are a newer migration; fall back
+  // to winner-only if they haven't been applied to this database yet, so an
+  // unrun migration can't take the whole History page down.
   const { data, error } = await supabase
     .from("weeks")
-    .select("*, winner:winner_player_id(name, avatar_url)")
+    .select(
+      "*, winner:winner_player_id(name, avatar_url), comeback:comeback_player_id(name), consistent:consistent_player_id(name)"
+    )
     .not("end_date", "is", null)
     .order("start_date", { ascending: false });
-  if (error) throw error;
-  type WinnerJoin = { name: string; avatar_url: string | null } | null;
+
+  if (error) {
+    const fallback = await supabase
+      .from("weeks")
+      .select("*, winner:winner_player_id(name, avatar_url)")
+      .not("end_date", "is", null)
+      .order("start_date", { ascending: false });
+    if (fallback.error) throw fallback.error;
+    return (fallback.data ?? []).map((w) => {
+      const row = w as unknown as { winner?: NamedPlayer };
+      return {
+        ...w,
+        winner_name: row.winner?.name ?? null,
+        winner_avatar_url: row.winner?.avatar_url ?? null,
+        comeback_name: null,
+        consistent_name: null,
+      };
+    });
+  }
+
   return (data ?? []).map((w) => {
-    const winner = (w as { winner?: WinnerJoin }).winner ?? null;
+    const row = w as unknown as {
+      winner?: NamedPlayer;
+      comeback?: NamedPlayer;
+      consistent?: NamedPlayer;
+    };
     return {
       ...w,
-      winner_name: winner?.name ?? null,
-      winner_avatar_url: winner?.avatar_url ?? null,
+      winner_name: row.winner?.name ?? null,
+      winner_avatar_url: row.winner?.avatar_url ?? null,
+      comeback_name: row.comeback?.name ?? null,
+      consistent_name: row.consistent?.name ?? null,
     };
   });
+}
+
+/** All scores dated on/after `sinceDate`, across every week -- used for
+ * streaks, which need to look back further than the current active week. */
+export async function getRecentScores(sinceDate: string): Promise<Score[]> {
+  const { data, error } = await supabase
+    .from("scores")
+    .select("*")
+    .gte("play_date", sinceDate);
+  if (error) throw error;
+  return data ?? [];
 }
 
 function buildStandings(
@@ -177,6 +233,116 @@ export function computeWeekStandings(
     monday
   );
   return buildStandings(players, scores, dateRange(earliestScoreDate, sunday), today);
+}
+
+export type Streaks = { played: number; leader: number };
+
+/** Consecutive-days-played and consecutive-days-as-sole/tied-daily-leader
+ * streaks, walking backward from today (or yesterday, if today hasn't been
+ * logged yet -- the day isn't "missed" until it's actually over). */
+export function computeStreaks(
+  players: Player[],
+  scores: Score[],
+  today: string
+): Map<string, Streaks> {
+  const byDate = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (!byDate.has(s.play_date)) byDate.set(s.play_date, new Map());
+    byDate.get(s.play_date)!.set(s.player_id, s.guesses);
+  }
+
+  const result = new Map<string, Streaks>();
+  for (const player of players) {
+    const playedToday = byDate.get(today)?.has(player.id) ?? false;
+    let cursor = playedToday ? today : addDays(today, -1);
+    let played = 0;
+    let leader = 0;
+    let leaderBroken = false;
+
+    for (let i = 0; i < 400; i++) {
+      const dayScores = byDate.get(cursor);
+      const mine = dayScores?.get(player.id);
+      if (mine === undefined) break;
+      played++;
+
+      if (!leaderBroken) {
+        const min = Math.min(...dayScores!.values());
+        if (mine === min) {
+          leader++;
+        } else {
+          leaderBroken = true;
+        }
+      }
+      cursor = addDays(cursor, -1);
+    }
+    result.set(player.id, { played, leader });
+  }
+  return result;
+}
+
+export type WeekAwards = {
+  comebackPlayerId: string | null;
+  consistentPlayerId: string | null;
+  margin: number | null;
+};
+
+/** Superlatives for a just-finished week: biggest rank improvement from the
+ * first played day to the final standings ("Comeback of the Week"), lowest
+ * variance among players with at least 2 real (non-miss) entries ("Most
+ * Consistent"), and the point gap between 1st and 2nd place. */
+export function computeWeekAwards(standings: Standing[]): WeekAwards {
+  if (standings.length < 2) {
+    return { comebackPlayerId: null, consistentPlayerId: null, margin: null };
+  }
+
+  const margin = standings[1].total - standings[0].total;
+
+  let consistentPlayerId: string | null = null;
+  let bestVariance = Infinity;
+  for (const s of standings) {
+    const real = s.daily
+      .map((d) => d.guesses)
+      .filter((g): g is number => g !== null && g < MISS_SCORE);
+    if (real.length < 2) continue;
+    const mean = real.reduce((a, b) => a + b, 0) / real.length;
+    const variance =
+      real.reduce((a, b) => a + (b - mean) ** 2, 0) / real.length;
+    if (variance < bestVariance) {
+      bestVariance = variance;
+      consistentPlayerId = s.player.id;
+    }
+  }
+
+  let comebackPlayerId: string | null = null;
+  const days = standings[0].daily.map((d) => d.date);
+  const firstPlayedDate = days.find((date) =>
+    standings.some((s) => s.daily.find((d) => d.date === date)?.guesses !== null)
+  );
+  if (firstPlayedDate && days.length > 1) {
+    const startOrder = [...standings]
+      .map((s) => ({
+        id: s.player.id,
+        guesses:
+          s.daily.find((d) => d.date === firstPlayedDate)?.guesses ??
+          MISS_SCORE,
+      }))
+      .sort((a, b) => a.guesses - b.guesses)
+      .map((x) => x.id);
+    const finalOrder = standings.map((s) => s.player.id);
+
+    let bestImprovement = 0;
+    for (const s of standings) {
+      const startRank = startOrder.indexOf(s.player.id);
+      const endRank = finalOrder.indexOf(s.player.id);
+      const improvement = startRank - endRank;
+      if (improvement > bestImprovement) {
+        bestImprovement = improvement;
+        comebackPlayerId = s.player.id;
+      }
+    }
+  }
+
+  return { comebackPlayerId, consistentPlayerId, margin };
 }
 
 export { todayStr, addDays, dateRange, getWeekBounds };

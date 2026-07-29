@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { submitScore } from "@/app/actions";
+import { submitScore, type SubmitScoreResult } from "@/app/actions";
 import Avatar from "@/components/Avatar";
 import DateField from "@/components/DateField";
+import ReactionPopup from "@/components/ReactionPopup";
 import { colorForKey } from "@/lib/constants";
 import type { Player } from "@/lib/data";
 
@@ -19,14 +20,16 @@ export default function ScoreForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [reaction, setReaction] = useState<SubmitScoreResult | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     setSaved(false);
     startTransition(async () => {
-      await submitScore(formData);
+      const result = await submitScore(formData);
       setSaved(true);
+      setReaction(result);
       setTimeout(() => setSaved(false), 2500);
     });
   }
@@ -108,6 +111,10 @@ export default function ScoreForm({
       >
         {isPending ? "Saving…" : saved ? "Saved ✓" : "Save score"}
       </button>
+
+      {reaction && (
+        <ReactionPopup result={reaction} onDone={() => setReaction(null)} />
+      )}
     </form>
   );
 }

@@ -1,7 +1,8 @@
 import Avatar from "@/components/Avatar";
+import StreakBadges from "@/components/StreakBadges";
 import WeeklyChart from "@/components/WeeklyChart";
 import { MISS_SCORE } from "@/lib/constants";
-import type { Player } from "@/lib/data";
+import type { Player, Streaks } from "@/lib/data";
 
 type Standing = {
   player: Player;
@@ -13,10 +14,12 @@ export default function WeekStats({
   standings,
   hasScores,
   today,
+  streaks,
 }: {
   standings: Standing[];
   hasScores: boolean;
   today: string;
+  streaks?: Map<string, Streaks>;
 }) {
   return (
     <>
@@ -44,6 +47,12 @@ export default function WeekStats({
                   />
                   {s.player.name}
                   {medal && <span className="text-lg">{medal}</span>}
+                  {streaks && (
+                    <StreakBadges
+                      played={streaks.get(s.player.id)?.played ?? 0}
+                      leader={streaks.get(s.player.id)?.leader ?? 0}
+                    />
+                  )}
                 </span>
                 <span className="text-sm text-black/60 dark:text-white/60">
                   {s.total} pts

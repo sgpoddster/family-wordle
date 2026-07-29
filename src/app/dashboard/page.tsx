@@ -1,9 +1,13 @@
 import EndWeekButton from "@/components/EndWeekButton";
 import WeekStats from "@/components/WeekStats";
 import {
+  addDays,
+  computeStandings,
+  computeStreaks,
   computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
+  getRecentScores,
   getScoresForWeek,
   getWeekBounds,
   todayStr,
@@ -21,6 +25,16 @@ export default async function DashboardPage() {
   const hasScores = standings.some((s) =>
     s.daily.some((d) => d.guesses !== null)
   );
+  const recentScores = await getRecentScores(addDays(today, -60));
+  const streaks = computeStreaks(players, recentScores, today);
+  // The manually-tracked period (matches what endWeek() settles server-side),
+  // which can differ from the Mon-Sun display range above.
+  const trackedPeriodStandings = computeStandings(
+    players,
+    scores,
+    week.start_date,
+    today
+  );
 
   return (
     <div className="space-y-8">
@@ -31,7 +45,9 @@ export default async function DashboardPage() {
             {formatDate(monday)} – {formatDate(sunday)}
           </p>
         </div>
-        {players.length > 0 && <EndWeekButton />}
+        {players.length > 0 && (
+          <EndWeekButton standings={trackedPeriodStandings} />
+        )}
       </div>
 
       {players.length === 0 ? (
@@ -39,7 +55,12 @@ export default async function DashboardPage() {
           Add family members on the Players page to start tracking.
         </p>
       ) : (
-        <WeekStats standings={standings} hasScores={hasScores} today={today} />
+        <WeekStats
+          standings={standings}
+          hasScores={hasScores}
+          today={today}
+          streaks={streaks}
+        />
       )}
     </div>
   );

@@ -2,9 +2,12 @@ import ScoreForm from "@/components/ScoreForm";
 import WeekStats from "@/components/WeekStats";
 import {
   MISS_SCORE,
+  addDays,
+  computeStreaks,
   computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
+  getRecentScores,
   getScoresForWeek,
   todayStr,
 } from "@/lib/data";
@@ -14,9 +17,7 @@ export default async function EntryPage() {
     getActivePlayers(),
     getActiveWeek(),
   ]);
-  const scores = await getScoresForWeek(week.id);
   const today = todayStr();
-  const standings = computeWeekStandings(players, scores, today);
 
   if (players.length === 0) {
     return (
@@ -29,6 +30,11 @@ export default async function EntryPage() {
       </div>
     );
   }
+
+  const scores = await getScoresForWeek(week.id);
+  const standings = computeWeekStandings(players, scores, today);
+  const recentScores = await getRecentScores(addDays(today, -60));
+  const streaks = computeStreaks(players, recentScores, today);
 
   return (
     <div className="space-y-12">
@@ -52,6 +58,7 @@ export default async function EntryPage() {
             s.daily.some((d) => d.guesses !== null)
           )}
           today={today}
+          streaks={streaks}
         />
       </div>
     </div>
