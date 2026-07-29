@@ -1,65 +1,146 @@
-import Image from "next/image";
+import { submitScore } from "@/app/actions";
+import {
+  MISS_SCORE,
+  getActivePlayers,
+  getActiveWeek,
+  getScoresForWeek,
+  todayStr,
+} from "@/lib/data";
 
-export default function Home() {
+const GUESS_OPTIONS = [1, 2, 3, 4, 5, 6];
+
+export default async function EntryPage() {
+  const [players, week] = await Promise.all([
+    getActivePlayers(),
+    getActiveWeek(),
+  ]);
+  const scores = await getScoresForWeek(week.id);
+  const today = todayStr();
+  const todaysScores = new Map(
+    scores.filter((s) => s.play_date === today).map((s) => [s.player_id, s])
+  );
+
+  if (players.length === 0) {
+    return (
+      <div className="text-center text-black/60 dark:text-white/60">
+        <p>No family members yet.</p>
+        <a href="/players" className="underline">
+          Add someone on the Players page
+        </a>{" "}
+        to get started.
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold">Log today&apos;s score</h1>
+        <p className="text-sm text-black/60 dark:text-white/60">
+          Lower is better &mdash; a fail or a missed day counts as{" "}
+          {MISS_SCORE}.
+        </p>
+      </div>
+
+      <form action={submitScore} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="playerId">
+            Who&apos;s playing?
+          </label>
+          <select
+            id="playerId"
+            name="playerId"
+            required
+            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {players.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
-      </main>
+
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="playDate">
+            Date
+          </label>
+          <input
+            id="playDate"
+            name="playDate"
+            type="date"
+            defaultValue={today}
+            max={today}
+            required
+            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
+          />
+        </div>
+
+        <fieldset>
+          <legend className="block text-sm font-medium mb-2">
+            Guesses to solve it
+          </legend>
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+            {GUESS_OPTIONS.map((n) => (
+              <label key={n} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="guesses"
+                  value={n}
+                  defaultChecked={n === 4}
+                  className="peer sr-only"
+                  required
+                />
+                <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#6aaa64] peer-checked:text-white peer-checked:border-[#6aaa64] transition-colors">
+                  {n}
+                </div>
+              </label>
+            ))}
+            <label className="cursor-pointer col-span-4 sm:col-span-3">
+              <input
+                type="radio"
+                name="guesses"
+                value="fail"
+                className="peer sr-only"
+                required
+              />
+              <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#787c7e] peer-checked:text-white peer-checked:border-[#787c7e] transition-colors">
+                Failed / didn&apos;t play
+              </div>
+            </label>
+          </div>
+        </fieldset>
+
+        <button
+          type="submit"
+          className="w-full rounded-md bg-[#6aaa64] py-2.5 font-semibold text-white hover:bg-[#5a9654] transition-colors"
+        >
+          Save score
+        </button>
+      </form>
+
+      <div>
+        <h2 className="text-sm font-medium text-black/60 dark:text-white/60 mb-2">
+          Today so far
+        </h2>
+        <ul className="space-y-1 text-sm">
+          {players.map((p) => {
+            const score = todaysScores.get(p.id);
+            return (
+              <li key={p.id} className="flex justify-between">
+                <span>{p.name}</span>
+                <span className="text-black/60 dark:text-white/60">
+                  {score
+                    ? score.guesses >= MISS_SCORE
+                      ? "Failed"
+                      : `${score.guesses} guesses`
+                    : "Not logged yet"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
