@@ -1,5 +1,5 @@
 import Avatar from "@/components/Avatar";
-import WeeklyChart from "@/components/WeeklyChart";
+import TileGrid from "@/components/TileGrid";
 import { MISS_SCORE } from "@/lib/constants";
 import type { Player } from "@/lib/data";
 
@@ -18,7 +18,7 @@ export default function WeekStats({
 }) {
   return (
     <>
-      <WeeklyChart standings={standings} />
+      <TileGrid standings={standings} />
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
