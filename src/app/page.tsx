@@ -2,8 +2,7 @@ import ScoreForm from "@/components/ScoreForm";
 import WeekStats from "@/components/WeekStats";
 import {
   MISS_SCORE,
-  addDays,
-  computeStandings,
+  computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
   getScoresForWeek,
@@ -17,13 +16,7 @@ export default async function EntryPage() {
   ]);
   const scores = await getScoresForWeek(week.id);
   const today = todayStr();
-  const weekHasStarted = week.start_date <= today;
-  const standings = computeStandings(
-    players,
-    scores,
-    week.start_date,
-    weekHasStarted ? today : addDays(week.start_date, -1)
-  );
+  const standings = computeWeekStandings(players, scores, today);
 
   if (players.length === 0) {
     return (
@@ -53,7 +46,13 @@ export default async function EntryPage() {
 
       <div className="space-y-8 border-t border-black/10 dark:border-white/10 pt-8">
         <h2 className="text-xl font-bold">This week so far</h2>
-        <WeekStats standings={standings} weekHasStarted={weekHasStarted} />
+        <WeekStats
+          standings={standings}
+          hasScores={standings.some((s) =>
+            s.daily.some((d) => d.guesses !== null)
+          )}
+          today={today}
+        />
       </div>
     </div>
   );

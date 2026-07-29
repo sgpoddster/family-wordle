@@ -1,11 +1,11 @@
 import EndWeekButton from "@/components/EndWeekButton";
 import WeekStats from "@/components/WeekStats";
 import {
-  addDays,
-  computeStandings,
+  computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
   getScoresForWeek,
+  getWeekBounds,
   todayStr,
 } from "@/lib/data";
 
@@ -16,14 +16,11 @@ export default async function DashboardPage() {
   ]);
   const scores = await getScoresForWeek(week.id);
   const today = todayStr();
-  const weekHasStarted = week.start_date <= today;
-  const standings = computeStandings(
-    players,
-    scores,
-    week.start_date,
-    weekHasStarted ? today : addDays(week.start_date, -1)
+  const { monday, sunday } = getWeekBounds(today);
+  const standings = computeWeekStandings(players, scores, today);
+  const hasScores = standings.some((s) =>
+    s.daily.some((d) => d.guesses !== null)
   );
-  const displayStart = standings[0]?.daily[0]?.date ?? week.start_date;
 
   return (
     <div className="space-y-8">
@@ -31,9 +28,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold">This week</h1>
           <p className="text-sm text-black/60 dark:text-white/60">
-            {weekHasStarted
-              ? `${formatDate(displayStart)} – ${formatDate(today)}`
-              : `Starts ${formatDate(week.start_date)}`}
+            {formatDate(monday)} – {formatDate(sunday)}
           </p>
         </div>
         {players.length > 0 && <EndWeekButton />}
@@ -44,7 +39,7 @@ export default async function DashboardPage() {
           Add family members on the Players page to start tracking.
         </p>
       ) : (
-        <WeekStats standings={standings} weekHasStarted={weekHasStarted} />
+        <WeekStats standings={standings} hasScores={hasScores} today={today} />
       )}
     </div>
   );

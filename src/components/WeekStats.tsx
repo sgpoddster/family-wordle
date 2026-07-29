@@ -11,25 +11,27 @@ type Standing = {
 
 export default function WeekStats({
   standings,
-  weekHasStarted,
+  hasScores,
+  today,
 }: {
   standings: Standing[];
-  weekHasStarted: boolean;
+  hasScores: boolean;
+  today: string;
 }) {
   return (
     <>
-      <WeeklyChart standings={standings} />
+      <WeeklyChart standings={standings} today={today} />
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
         <ol className="space-y-2">
           {standings.map((s, i) => {
-            const medal = weekHasStarted ? ["🏆", "🥈", "🥉"][i] : undefined;
+            const medal = hasScores ? ["🏆", "🥈", "🥉"][i] : undefined;
             return (
               <li
                 key={s.player.id}
                 className={`flex items-center justify-between rounded-md border px-4 py-2.5 transition-transform ${
-                  i === 0 && weekHasStarted
+                  i === 0 && hasScores
                     ? "border-[#6aaa64]/50 bg-[#6aaa64]/5 scale-[1.02]"
                     : "border-black/10 dark:border-white/10"
                 }`}

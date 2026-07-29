@@ -47,6 +47,15 @@ function dateRange(start: string, end: string): string[] {
   return dates;
 }
 
+/** Monday–Sunday bounds of the calendar week containing `dateStr`. */
+function getWeekBounds(dateStr: string): { monday: string; sunday: string } {
+  const dow = new Date(dateStr + "T00:00:00").getDay(); // 0 (Sun) .. 6 (Sat)
+  const diffToMonday = dow === 0 ? -6 : 1 - dow;
+  const monday = addDays(dateStr, diffToMonday);
+  const sunday = addDays(monday, 6);
+  return { monday, sunday };
+}
+
 export async function getActivePlayers(): Promise<Player[]> {
   const { data, error } = await supabase
     .from("players")
@@ -115,23 +124,12 @@ export async function getClosedWeeks(): Promise<
   });
 }
 
-/** Per-player totals for a week so far: each day from start_date through
- * `through` counts as that day's guesses, or MISS_SCORE if nothing was
- * logged for that player on that day. Backfilled scores dated before
- * `startDate` (e.g. catching up on a missed day right after the app's
- * first "week" began) still need to count, so the range expands to
- * cover the earliest score actually attached to this week. */
-export function computeStandings(
+function buildStandings(
   players: Player[],
   scores: Score[],
-  startDate: string,
-  through: string
+  days: string[],
+  today: string
 ) {
-  const earliestScoreDate = scores.reduce(
-    (min, s) => (s.play_date < min ? s.play_date : min),
-    startDate
-  );
-  const days = dateRange(earliestScoreDate, through);
   const byPlayerDate = new Map<string, number>();
   for (const s of scores) {
     byPlayerDate.set(`${s.player_id}_${s.play_date}`, s.guesses);
@@ -143,13 +141,42 @@ export function computeStandings(
         date,
         guesses: byPlayerDate.get(`${player.id}_${date}`) ?? null,
       }));
-      const total = daily.reduce(
-        (sum, d) => sum + (d.guesses ?? MISS_SCORE),
-        0
-      );
+      const total = daily.reduce((sum, d) => {
+        if (d.date > today) return sum; // hasn't happened yet, don't penalize
+        return sum + (d.guesses ?? MISS_SCORE);
+      }, 0);
       return { player, daily, total };
     })
     .sort((a, b) => a.total - b.total);
 }
 
-export { todayStr, addDays, dateRange };
+/** Per-player totals over an explicit date range (used to settle the
+ * winner of a manually-tracked week when "End Week" is clicked). */
+export function computeStandings(
+  players: Player[],
+  scores: Score[],
+  startDate: string,
+  through: string
+) {
+  return buildStandings(players, scores, dateRange(startDate, through), through);
+}
+
+/** Per-player totals for the calendar week containing `today`: always spans
+ * Monday through Sunday (so the chart/leaderboard has a stable shape and
+ * rolls over to a fresh week automatically), expanded backward to cover
+ * any backfilled score dated before that Monday. Days after `today` show
+ * as blank (not yet played) rather than being penalized as a miss. */
+export function computeWeekStandings(
+  players: Player[],
+  scores: Score[],
+  today: string
+) {
+  const { monday, sunday } = getWeekBounds(today);
+  const earliestScoreDate = scores.reduce(
+    (min, s) => (s.play_date < min ? s.play_date : min),
+    monday
+  );
+  return buildStandings(players, scores, dateRange(earliestScoreDate, sunday), today);
+}
+
+export { todayStr, addDays, dateRange, getWeekBounds };

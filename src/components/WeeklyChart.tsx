@@ -19,8 +19,10 @@ type Standing = {
 
 export default function WeeklyChart({
   standings,
+  today,
 }: {
   standings: Standing[];
+  today: string;
 }) {
   if (standings.length === 0 || standings[0].daily.length === 0) {
     return (
@@ -37,8 +39,15 @@ export default function WeeklyChart({
         weekday: "short",
       }),
     };
+    const isFuture = date > today;
     for (const s of standings) {
-      row[s.player.name] = s.daily[i].guesses ?? MISS_SCORE;
+      const guesses = s.daily[i].guesses;
+      if (guesses !== null) {
+        row[s.player.name] = guesses;
+      } else if (!isFuture) {
+        row[s.player.name] = MISS_SCORE;
+      }
+      // else: day hasn't happened yet, leave unset so no point is plotted
     }
     return row;
   });
