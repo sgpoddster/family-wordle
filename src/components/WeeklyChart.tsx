@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -9,10 +8,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Avatar from "@/components/Avatar";
 import { MISS_SCORE, colorForKey } from "@/lib/constants";
+import type { Player } from "@/lib/data";
 
 type Standing = {
-  player: { id: string; name: string };
+  player: Player;
   daily: { date: string; guesses: number | null }[];
 };
 
@@ -71,9 +72,6 @@ export default function WeeklyChart({
               fontSize: 13,
             }}
           />
-          <Legend
-            wrapperStyle={{ fontSize: 14, fontWeight: 600, paddingTop: 8 }}
-          />
           {standings.map((s) => {
             const color = colorForKey(s.player.name);
             return (
@@ -91,6 +89,30 @@ export default function WeeklyChart({
           })}
         </LineChart>
       </ResponsiveContainer>
+
+      <div className="flex flex-wrap justify-center gap-2 mt-2">
+        {standings.map((s) => {
+          const color = colorForKey(s.player.name);
+          return (
+            <span
+              key={s.player.id}
+              style={{
+                backgroundColor: `${color}26`,
+                borderColor: `${color}80`,
+                color,
+              }}
+              className="flex items-center gap-1.5 rounded-full border pl-1 pr-3 py-1 text-sm font-semibold"
+            >
+              <Avatar
+                name={s.player.name}
+                avatarUrl={s.player.avatar_url}
+                size={22}
+              />
+              {s.player.name}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
