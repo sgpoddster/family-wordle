@@ -23,6 +23,7 @@ export default async function DashboardPage() {
     week.start_date,
     weekHasStarted ? today : addDays(week.start_date, -1)
   );
+  const displayStart = standings[0]?.daily[0]?.date ?? week.start_date;
 
   return (
     <div className="space-y-8">
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold">This week</h1>
           <p className="text-sm text-black/60 dark:text-white/60">
             {weekHasStarted
-              ? `${formatDate(week.start_date)} – ${formatDate(today)}`
+              ? `${formatDate(displayStart)} – ${formatDate(today)}`
               : `Starts ${formatDate(week.start_date)}`}
           </p>
         </div>

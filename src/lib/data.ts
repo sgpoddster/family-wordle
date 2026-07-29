@@ -117,14 +117,21 @@ export async function getClosedWeeks(): Promise<
 
 /** Per-player totals for a week so far: each day from start_date through
  * `through` counts as that day's guesses, or MISS_SCORE if nothing was
- * logged for that player on that day. */
+ * logged for that player on that day. Backfilled scores dated before
+ * `startDate` (e.g. catching up on a missed day right after the app's
+ * first "week" began) still need to count, so the range expands to
+ * cover the earliest score actually attached to this week. */
 export function computeStandings(
   players: Player[],
   scores: Score[],
   startDate: string,
   through: string
 ) {
-  const days = dateRange(startDate, through);
+  const earliestScoreDate = scores.reduce(
+    (min, s) => (s.play_date < min ? s.play_date : min),
+    startDate
+  );
+  const days = dateRange(earliestScoreDate, through);
   const byPlayerDate = new Map<string, number>();
   for (const s of scores) {
     byPlayerDate.set(`${s.player_id}_${s.play_date}`, s.guesses);
