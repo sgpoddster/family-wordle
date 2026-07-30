@@ -184,7 +184,8 @@ function buildStandings(
   players: Player[],
   scores: Score[],
   days: string[],
-  today: string
+  today: string,
+  penalizeToday: boolean
 ) {
   const byPlayerDate = new Map<string, number>();
   for (const s of scores) {
@@ -199,6 +200,9 @@ function buildStandings(
       }));
       const total = daily.reduce((sum, d) => {
         if (d.date > today) return sum; // hasn't happened yet, don't penalize
+        if (d.date === today && !penalizeToday && d.guesses === null) {
+          return sum; // today isn't settled yet -- don't penalize until logged
+        }
         return sum + (d.guesses ?? MISS_SCORE);
       }, 0);
       return { player, daily, total };
@@ -207,21 +211,31 @@ function buildStandings(
 }
 
 /** Per-player totals over an explicit date range (used to settle the
- * winner of a manually-tracked week when "End Week" is clicked). */
+ * winner of a manually-tracked week when "End Week" is clicked -- `through`
+ * is the day being finalized, so an unlogged entry there does count as a
+ * miss since the week is ending now). */
 export function computeStandings(
   players: Player[],
   scores: Score[],
   startDate: string,
   through: string
 ) {
-  return buildStandings(players, scores, dateRange(startDate, through), through);
+  return buildStandings(
+    players,
+    scores,
+    dateRange(startDate, through),
+    through,
+    true
+  );
 }
 
 /** Per-player totals for the calendar week containing `today`: always spans
  * Monday through Sunday (so the chart/leaderboard has a stable shape and
  * rolls over to a fresh week automatically), expanded backward to cover
  * any backfilled score dated before that Monday. Days after `today` show
- * as blank (not yet played) rather than being penalized as a miss. */
+ * as blank (not yet played) rather than being penalized as a miss, and
+ * today itself isn't penalized until it's actually logged -- the day
+ * isn't over yet, so an unlogged "today" isn't a miss (yet). */
 export function computeWeekStandings(
   players: Player[],
   scores: Score[],
@@ -232,7 +246,13 @@ export function computeWeekStandings(
     (min, s) => (s.play_date < min ? s.play_date : min),
     monday
   );
-  return buildStandings(players, scores, dateRange(earliestScoreDate, sunday), today);
+  return buildStandings(
+    players,
+    scores,
+    dateRange(earliestScoreDate, sunday),
+    today,
+    false
+  );
 }
 
 export type Streaks = { played: number; leader: number };
