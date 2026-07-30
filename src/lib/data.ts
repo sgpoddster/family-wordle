@@ -375,4 +375,48 @@ export function computeWeekAwards(standings: Standing[]): WeekAwards {
   return { comebackPlayerId, consistentPlayerId, margin };
 }
 
+/** Every score ever logged, across all weeks -- used for all-time records
+ * (Hall of Fame) and the calendar heatmap, which need the full history. */
+export async function getAllScores(): Promise<Score[]> {
+  const { data, error } = await supabase.from("scores").select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** The single best (lowest, non-miss) score ever logged, or null if no one
+ * has a real score yet. Ties go to whichever happened first. */
+export function getBestDayEver(scores: Score[]): Score | null {
+  let best: Score | null = null;
+  for (const s of scores) {
+    if (s.guesses >= MISS_SCORE) continue;
+    if (
+      !best ||
+      s.guesses < best.guesses ||
+      (s.guesses === best.guesses && s.play_date < best.play_date)
+    ) {
+      best = s;
+    }
+  }
+  return best;
+}
+
+/** The longest-ever run of consecutive calendar days a player has logged
+ * something (score or fail), anywhere in their history -- not just the
+ * streak currently running. */
+export function longestStreakEver(scores: Score[], playerId: string): number {
+  const dates = [...new Set(
+    scores.filter((s) => s.player_id === playerId).map((s) => s.play_date)
+  )].sort();
+
+  let longest = 0;
+  let current = 0;
+  let prevDate: string | null = null;
+  for (const date of dates) {
+    current = prevDate && addDays(prevDate, 1) === date ? current + 1 : 1;
+    longest = Math.max(longest, current);
+    prevDate = date;
+  }
+  return longest;
+}
+
 export { todayStr, addDays, dateRange, getWeekBounds };

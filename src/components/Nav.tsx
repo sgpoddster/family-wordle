@@ -4,6 +4,7 @@ const links = [
   { href: "/", label: "Log Score" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/history", label: "History" },
+  { href: "/hall-of-fame", label: "Hall of Fame" },
   { href: "/players", label: "Players" },
 ];
 

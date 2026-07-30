@@ -186,7 +186,18 @@ export type PlayerStats = {
   average: number | null;
   playedStreak: number;
   weeksWon: number;
+  comebackAwards: number;
+  consistentAwards: number;
 };
+
+async function countWeeksWhere(column: string, playerId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("weeks")
+    .select("id", { count: "exact", head: true })
+    .eq(column, playerId);
+  if (error) return 0; // column may not exist yet on older schemas
+  return count ?? 0;
+}
 
 export async function getPlayerStats(playerId: string): Promise<PlayerStats> {
   const { data, error } = await supabase
@@ -213,11 +224,19 @@ export async function getPlayerStats(playerId: string): Promise<PlayerStats> {
     cursor = addDays(cursor, -1);
   }
 
-  const { count, error: weeksError } = await supabase
-    .from("weeks")
-    .select("id", { count: "exact", head: true })
-    .eq("winner_player_id", playerId);
-  if (weeksError) throw weeksError;
+  const [weeksWon, comebackAwards, consistentAwards] = await Promise.all([
+    countWeeksWhere("winner_player_id", playerId),
+    countWeeksWhere("comeback_player_id", playerId),
+    countWeeksWhere("consistent_player_id", playerId),
+  ]);
 
-  return { gamesPlayed, bestScore, average, playedStreak, weeksWon: count ?? 0 };
+  return {
+    gamesPlayed,
+    bestScore,
+    average,
+    playedStreak,
+    weeksWon,
+    comebackAwards,
+    consistentAwards,
+  };
 }

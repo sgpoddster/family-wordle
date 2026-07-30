@@ -1,10 +1,50 @@
 import Avatar from "@/components/Avatar";
-import { getClosedWeeks } from "@/lib/data";
+import ShareWeekButton from "@/components/ShareWeekButton";
+import {
+  MISS_SCORE,
+  computeStandings,
+  getAllPlayers,
+  getClosedWeeks,
+  getScoresForWeek,
+} from "@/lib/data";
 
 const NAIL_BITER_MARGIN = 2;
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+function tileEmoji(guesses: number | null): string {
+  if (guesses === null || guesses >= MISS_SCORE) return "⬛";
+  if (guesses <= 2) return "🟩";
+  if (guesses <= 4) return "🟨";
+  return "🟧";
+}
+
+function buildShareText(
+  week: { start_date: string; end_date: string | null },
+  standings: { player: { name: string }; daily: { guesses: number | null }[]; total: number }[]
+): string {
+  const range = `${formatDate(week.start_date)}–${
+    week.end_date ? formatDate(week.end_date) : "?"
+  }`;
+  const lines = [`🏆 The Wordle Cup — ${range}`];
+  standings.forEach((s, i) => {
+    const medal = MEDALS[i] ?? `${i + 1}.`;
+    const squares = s.daily.map((d) => tileEmoji(d.guesses)).join("");
+    lines.push(`${medal} ${s.player.name} (${s.total}): ${squares}`);
+  });
+  return lines.join("\n");
+}
 
 export default async function HistoryPage() {
-  const weeks = await getClosedWeeks();
+  const [weeks, players] = await Promise.all([getClosedWeeks(), getAllPlayers()]);
+
+  const weeksWithShare = await Promise.all(
+    weeks.map(async (w) => {
+      if (!w.end_date) return { week: w, shareText: null };
+      const scores = await getScoresForWeek(w.id);
+      const standings = computeStandings(players, scores, w.start_date, w.end_date);
+      return { week: w, shareText: buildShareText(w, standings) };
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -17,7 +57,7 @@ export default async function HistoryPage() {
         </p>
       ) : (
         <ol className="space-y-3">
-          {weeks.map((w) => {
+          {weeksWithShare.map(({ week: w, shareText }) => {
             const isNailBiter =
               w.margin !== null && w.margin <= NAIL_BITER_MARGIN;
             return (
@@ -25,28 +65,31 @@ export default async function HistoryPage() {
                 key={w.id}
                 className="rounded-md border border-black/10 dark:border-white/10 px-4 py-3 space-y-2"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">
                     {formatDate(w.start_date)} &ndash;{" "}
                     {w.end_date ? formatDate(w.end_date) : "?"}
                   </span>
-                  <span className="flex items-center gap-2 text-sm">
-                    {w.winner_name ? (
-                      <>
-                        <Avatar
-                          name={w.winner_name}
-                          avatarUrl={w.winner_avatar_url}
-                          size={28}
-                        />
-                        <span className="font-semibold">{w.winner_name}</span>
-                        <span className="text-lg">🏆</span>
-                      </>
-                    ) : (
-                      <span className="text-black/50 dark:text-white/50">
-                        No winner
-                      </span>
-                    )}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-2 text-sm">
+                      {w.winner_name ? (
+                        <>
+                          <Avatar
+                            name={w.winner_name}
+                            avatarUrl={w.winner_avatar_url}
+                            size={28}
+                          />
+                          <span className="font-semibold">{w.winner_name}</span>
+                          <span className="text-lg">🏆</span>
+                        </>
+                      ) : (
+                        <span className="text-black/50 dark:text-white/50">
+                          No winner
+                        </span>
+                      )}
+                    </span>
+                    {shareText && <ShareWeekButton text={shareText} />}
+                  </div>
                 </div>
 
                 {(w.comeback_name || w.consistent_name || isNailBiter) && (

@@ -56,17 +56,48 @@ export default function StatsAvatar({
             {isPending || !stats ? (
               <p className="mt-6 text-sm text-white/50">Loading stats…</p>
             ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3 text-left">
-                <Stat label="Best score" value={stats.bestScore ?? "–"} />
-                <Stat label="Average" value={stats.average ?? "–"} />
-                <Stat label="Games played" value={stats.gamesPlayed} />
-                <Stat label="Weeks won" value={stats.weeksWon} />
-                <Stat
-                  label="Current streak"
-                  value={stats.playedStreak > 0 ? `🔥 ${stats.playedStreak} days` : "–"}
-                  full
-                />
-              </div>
+              <>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-left">
+                  <Stat label="Best score" value={stats.bestScore ?? "–"} />
+                  <Stat label="Average" value={stats.average ?? "–"} />
+                  <Stat label="Games played" value={stats.gamesPlayed} />
+                  <Stat label="Weeks won" value={stats.weeksWon} />
+                  <Stat
+                    label="Current streak"
+                    value={stats.playedStreak > 0 ? `🔥 ${stats.playedStreak} days` : "–"}
+                    full
+                  />
+                </div>
+
+                <div className="mt-4 border-t border-white/10 pt-4 text-left">
+                  <p className="text-xs text-white/50 mb-2">Trophy case</p>
+                  {stats.weeksWon > 0 ||
+                  stats.comebackAwards > 0 ||
+                  stats.consistentAwards > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {stats.weeksWon > 0 && (
+                        <TrophyBadge icon="🏆" count={stats.weeksWon} label="week win" />
+                      )}
+                      {stats.comebackAwards > 0 && (
+                        <TrophyBadge
+                          icon="📈"
+                          count={stats.comebackAwards}
+                          label="comeback"
+                        />
+                      )}
+                      {stats.consistentAwards > 0 && (
+                        <TrophyBadge
+                          icon="🎯"
+                          count={stats.consistentAwards}
+                          label="consistent"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/40">No trophies yet &mdash; keep playing!</p>
+                  )}
+                </div>
+              </>
             )}
 
             <button
@@ -79,6 +110,25 @@ export default function StatsAvatar({
         </div>
       )}
     </>
+  );
+}
+
+function TrophyBadge({
+  icon,
+  count,
+  label,
+}: {
+  icon: string;
+  count: number;
+  label: string;
+}) {
+  return (
+    <span
+      title={`${count}x ${label}`}
+      className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-sm font-semibold text-white"
+    >
+      {icon} {count}
+    </span>
   );
 }
 
