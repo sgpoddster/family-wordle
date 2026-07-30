@@ -198,15 +198,24 @@ function buildStandings(
         date,
         guesses: byPlayerDate.get(`${player.id}_${date}`) ?? null,
       }));
-      const total = daily.reduce((sum, d) => {
-        if (d.date > totalCutoff) return sum;
+      const settledDays = daily.filter((d) => d.date <= totalCutoff);
+      const hasStarted = settledDays.some((d) =>
+        isExpectedOn(player, scores, d.date)
+      );
+      const total = settledDays.reduce((sum, d) => {
         if (d.guesses !== null) return sum + d.guesses; // a real entry always counts
         if (!isExpectedOn(player, scores, d.date)) return sum; // wasn't around yet
         return sum + MISS_SCORE;
       }, 0);
-      return { player, daily, total };
+      return { player, daily, total, hasStarted };
     })
-    .sort((a, b) => a.total - b.total);
+    .sort((a, b) => {
+      // Someone with zero applicable days yet (just joined) hasn't proven
+      // anything -- don't let a trivial 0 total rank them above people who
+      // have actually been playing.
+      if (a.hasStarted !== b.hasStarted) return a.hasStarted ? -1 : 1;
+      return a.total - b.total;
+    });
 }
 
 /** Whether `player` should be considered part of the group on `date`: either
