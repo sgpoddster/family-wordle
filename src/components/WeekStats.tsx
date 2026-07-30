@@ -38,10 +38,6 @@ export default function WeekStats({
         </div>
       )}
 
-      {hasScores && (
-        <Podium standings={standings.map((s) => ({ player: s.player, total: s.total }))} />
-      )}
-
       <div>
         <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
         <ol className="space-y-2">
@@ -81,6 +77,10 @@ export default function WeekStats({
           Lowest total wins &mdash; a miss counts as {MISS_SCORE}.
         </p>
       </div>
+
+      {hasScores && (
+        <Podium standings={standings.map((s) => ({ player: s.player, total: s.total }))} />
+      )}
     </>
   );
 }

@@ -33,6 +33,7 @@ export default function WeeklyChart({
   }
 
   const dates = standings[0].daily.map((d) => d.date);
+  const lastValue: Record<string, number> = {};
   const chartData = dates.map((date, i) => {
     const row: Record<string, string | number> = {
       date: new Date(date + "T00:00:00").toLocaleDateString(undefined, {
@@ -40,14 +41,24 @@ export default function WeeklyChart({
       }),
     };
     const isFuture = date > today;
+    const isToday = date === today;
     for (const s of standings) {
       const guesses = s.daily[i].guesses;
       if (guesses !== null) {
         row[s.player.name] = guesses;
-      } else if (!isFuture) {
+        lastValue[s.player.name] = guesses;
+      } else if (isFuture) {
+        // day hasn't happened yet at all -- leave unset, no point plotted
+      } else if (isToday) {
+        // today isn't over yet -- hold at yesterday's level instead of
+        // dropping to a miss, rather than penalizing before the day ends
+        if (lastValue[s.player.name] !== undefined) {
+          row[s.player.name] = lastValue[s.player.name];
+        }
+      } else {
         row[s.player.name] = MISS_SCORE;
+        lastValue[s.player.name] = MISS_SCORE;
       }
-      // else: day hasn't happened yet, leave unset so no point is plotted
     }
     return row;
   });
