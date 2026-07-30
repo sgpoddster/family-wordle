@@ -22,7 +22,10 @@ type DotProps = {
   cy?: number;
   value?: number;
   stroke?: string;
+  payload?: Record<string, string | number>;
 };
+
+const TIE_SPREAD = 18;
 
 function ScoreDot({ cx, cy, value, stroke }: DotProps) {
   if (cx === undefined || cy === undefined || value === undefined) {
@@ -44,6 +47,27 @@ function ScoreDot({ cx, cy, value, stroke }: DotProps) {
       </text>
     </g>
   );
+}
+
+// Two players who score the same on the same day land on the exact same
+// point -- nudge each apart horizontally so both circles stay visible
+// instead of one silently hiding behind the other.
+function makeTieAwareDot(playerName: string, allNames: string[]) {
+  return function TieAwareDot(props: DotProps) {
+    const { cx, cy, value, payload } = props;
+    if (cx === undefined || value === undefined || !payload) {
+      return <ScoreDot {...props} />;
+    }
+    const tied = allNames
+      .filter((name) => payload[name] === value)
+      .sort((a, b) => a.localeCompare(b));
+    if (tied.length <= 1) {
+      return <ScoreDot {...props} />;
+    }
+    const slot = tied.indexOf(playerName);
+    const dx = (slot - (tied.length - 1) / 2) * TIE_SPREAD;
+    return <ScoreDot {...props} cx={cx + dx} cy={cy} />;
+  };
 }
 
 export default function WeeklyChart({
@@ -128,6 +152,7 @@ export default function WeeklyChart({
           />
           {standings.map((s) => {
             const color = colorForKey(s.player.name, allNames);
+            const tieAwareDot = makeTieAwareDot(s.player.name, allNames);
             return (
               <Line
                 key={s.player.id}
@@ -136,8 +161,8 @@ export default function WeeklyChart({
                 stroke={color}
                 strokeWidth={3}
                 connectNulls
-                dot={<ScoreDot />}
-                activeDot={<ScoreDot />}
+                dot={tieAwareDot}
+                activeDot={tieAwareDot}
               />
             );
           })}
