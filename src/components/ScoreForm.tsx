@@ -21,6 +21,12 @@ export default function ScoreForm({
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [reaction, setReaction] = useState<SubmitScoreResult | null>(null);
+  const [flipping, setFlipping] = useState<string | null>(null);
+
+  function flipTile(value: string) {
+    setFlipping(value);
+    setTimeout(() => setFlipping((v) => (v === value ? null : v)), 400);
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,7 +79,11 @@ export default function ScoreForm({
         </legend>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {GUESS_OPTIONS.map((n) => (
-            <label key={n} className="cursor-pointer">
+            <label
+              key={n}
+              className="cursor-pointer"
+              style={{ perspective: "300px" }}
+            >
               <input
                 type="radio"
                 name="guesses"
@@ -81,21 +91,40 @@ export default function ScoreForm({
                 defaultChecked={n === 4}
                 className="peer sr-only"
                 required
+                onClick={() => flipTile(String(n))}
               />
-              <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#6aaa64] peer-checked:text-white peer-checked:border-[#6aaa64] peer-checked:scale-105 transition-all">
+              <div
+                style={
+                  flipping === String(n)
+                    ? { animation: "tile-flip 0.4s ease-in-out" }
+                    : undefined
+                }
+                className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#6aaa64] peer-checked:text-white peer-checked:border-[#6aaa64] peer-checked:scale-105 transition-all"
+              >
                 {n}
               </div>
             </label>
           ))}
-          <label className="cursor-pointer col-span-4 sm:col-span-3">
+          <label
+            className="cursor-pointer col-span-4 sm:col-span-3"
+            style={{ perspective: "300px" }}
+          >
             <input
               type="radio"
               name="guesses"
               value="fail"
               className="peer sr-only"
               required
+              onClick={() => flipTile("fail")}
             />
-            <div className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#787c7e] peer-checked:text-white peer-checked:border-[#787c7e] transition-colors">
+            <div
+              style={
+                flipping === "fail"
+                  ? { animation: "tile-flip 0.4s ease-in-out" }
+                  : undefined
+              }
+              className="flex h-12 items-center justify-center rounded-md border border-black/15 dark:border-white/20 font-bold peer-checked:bg-[#787c7e] peer-checked:text-white peer-checked:border-[#787c7e] transition-colors"
+            >
               Failed / didn&apos;t play
             </div>
           </label>

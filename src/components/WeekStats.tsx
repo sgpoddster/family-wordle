@@ -1,4 +1,6 @@
-import Avatar from "@/components/Avatar";
+import CompletionRing from "@/components/CompletionRing";
+import Podium from "@/components/Podium";
+import StatsAvatar from "@/components/StatsAvatar";
 import StreakBadges from "@/components/StreakBadges";
 import WeeklyChart from "@/components/WeeklyChart";
 import { MISS_SCORE } from "@/lib/constants";
@@ -21,15 +23,29 @@ export default function WeekStats({
   today: string;
   streaks?: Map<string, Streaks>;
 }) {
+  const days = standings[0]?.daily.map((d) => d.date) ?? [];
+  const fullyLoggedDays = days.filter((_, i) =>
+    standings.every((s) => s.daily[i]?.guesses !== null)
+  ).length;
+
   return (
     <>
       <WeeklyChart standings={standings} today={today} />
+
+      {standings.length > 0 && (
+        <div className="flex justify-center">
+          <CompletionRing completed={fullyLoggedDays} />
+        </div>
+      )}
+
+      {hasScores && (
+        <Podium standings={standings.map((s) => ({ player: s.player, total: s.total }))} />
+      )}
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
         <ol className="space-y-2">
           {standings.map((s, i) => {
-            const medal = hasScores ? ["🏆", "🥈", "🥉"][i] : undefined;
             return (
               <li
                 key={s.player.id}
@@ -40,13 +56,13 @@ export default function WeekStats({
                 }`}
               >
                 <span className="flex items-center gap-3 font-medium">
-                  <Avatar
+                  <StatsAvatar
+                    playerId={s.player.id}
                     name={s.player.name}
                     avatarUrl={s.player.avatar_url}
                     size={36}
                   />
                   {s.player.name}
-                  {medal && <span className="text-lg">{medal}</span>}
                   {streaks && (
                     <StreakBadges
                       played={streaks.get(s.player.id)?.played ?? 0}

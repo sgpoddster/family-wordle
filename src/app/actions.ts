@@ -171,3 +171,45 @@ export async function endWeek() {
   revalidatePath("/dashboard");
   revalidatePath("/history");
 }
+
+export type PlayerStats = {
+  gamesPlayed: number;
+  bestScore: number | null;
+  average: number | null;
+  playedStreak: number;
+  weeksWon: number;
+};
+
+export async function getPlayerStats(playerId: string): Promise<PlayerStats> {
+  const { data, error } = await supabase
+    .from("scores")
+    .select("guesses, play_date")
+    .eq("player_id", playerId);
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const real = rows.map((r) => r.guesses).filter((g) => g < MISS_SCORE);
+  const gamesPlayed = rows.length;
+  const bestScore = real.length ? Math.min(...real) : null;
+  const average = real.length
+    ? Math.round((real.reduce((a, b) => a + b, 0) / real.length) * 10) / 10
+    : null;
+
+  const datesPlayed = new Set(rows.map((r) => r.play_date));
+  const today = todayStr();
+  let cursor = datesPlayed.has(today) ? today : addDays(today, -1);
+  let playedStreak = 0;
+  for (let i = 0; i < 400; i++) {
+    if (!datesPlayed.has(cursor)) break;
+    playedStreak++;
+    cursor = addDays(cursor, -1);
+  }
+
+  const { count, error: weeksError } = await supabase
+    .from("weeks")
+    .select("id", { count: "exact", head: true })
+    .eq("winner_player_id", playerId);
+  if (weeksError) throw weeksError;
+
+  return { gamesPlayed, bestScore, average, playedStreak, weeksWon: count ?? 0 };
+}
