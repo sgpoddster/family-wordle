@@ -15,34 +15,59 @@ const DISPLAY_ORDER = [1, 0, 2];
 
 export default function Podium({ standings }: { standings: Standing[] }) {
   const top3 = standings.slice(0, 3);
+  const rest = standings.slice(3);
   if (top3.length === 0) return null;
 
   return (
-    <div className="flex items-end justify-center gap-3">
-      {DISPLAY_ORDER.filter((i) => i < top3.length).map((i) => {
-        const s = top3[i];
-        return (
-          <div key={s.player.id} className="flex flex-col items-center gap-1">
-            <span className="text-2xl">{MEDALS[i]}</span>
-            <StatsAvatar
-              playerId={s.player.id}
-              name={s.player.name}
-              avatarUrl={s.player.avatar_url}
-              size={i === 0 ? 56 : 44}
-            />
-            <span className="text-sm font-semibold max-w-20 truncate">
-              {s.player.name}
-            </span>
-            <span className="text-xs text-black/60 dark:text-white/60">
-              {s.total} pts
-            </span>
-            <div
-              style={{ height: HEIGHTS[i] }}
-              className={`w-20 rounded-t-lg border-t border-x ${BLOCK_STYLES[i]}`}
-            />
-          </div>
-        );
-      })}
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex items-end justify-center gap-3">
+        {DISPLAY_ORDER.filter((i) => i < top3.length).map((i) => {
+          const s = top3[i];
+          return (
+            <div key={s.player.id} className="flex flex-col items-center gap-1">
+              <span className="text-2xl">{MEDALS[i]}</span>
+              <StatsAvatar
+                playerId={s.player.id}
+                name={s.player.name}
+                avatarUrl={s.player.avatar_url}
+                size={i === 0 ? 56 : 44}
+              />
+              <span className="text-sm font-semibold max-w-20 truncate">
+                {s.player.name}
+              </span>
+              <span className="text-xs text-black/60 dark:text-white/60">
+                {s.total} pts
+              </span>
+              <div
+                style={{ height: HEIGHTS[i] }}
+                className={`w-20 rounded-t-lg border-t border-x ${BLOCK_STYLES[i]}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {rest.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {rest.map((s, idx) => (
+            <div key={s.player.id} className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-black/40 dark:text-white/40 rounded-full border border-black/15 dark:border-white/20 w-5 h-5 flex items-center justify-center">
+                {idx + 4}
+              </span>
+              <StatsAvatar
+                playerId={s.player.id}
+                name={s.player.name}
+                avatarUrl={s.player.avatar_url}
+                size={32}
+              />
+              <span className="text-sm font-medium">{s.player.name}</span>
+              <span className="text-xs text-black/60 dark:text-white/60">
+                {s.total} pts
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
