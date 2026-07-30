@@ -28,6 +28,8 @@ export default function ScoreForm({
     setTimeout(() => setFlipping((v) => (v === value ? null : v)), 400);
   }
 
+  const allNames = players.map((p) => p.name);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -58,7 +60,9 @@ export default function ScoreForm({
                 required
               />
               <div
-                style={{ "--ring": colorForKey(p.name) } as React.CSSProperties}
+                style={
+                  { "--ring": colorForKey(p.name, allNames) } as React.CSSProperties
+                }
                 className="flex flex-col items-center gap-1 rounded-lg border-2 border-transparent p-2 peer-checked:border-[var(--ring)] peer-checked:bg-black/5 dark:peer-checked:bg-white/10 transition-colors"
               >
                 <Avatar name={p.name} avatarUrl={p.avatar_url} size={52} />

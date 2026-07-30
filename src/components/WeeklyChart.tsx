@@ -17,6 +17,35 @@ type Standing = {
   daily: { date: string; guesses: number | null }[];
 };
 
+type DotProps = {
+  cx?: number;
+  cy?: number;
+  value?: number;
+  stroke?: string;
+};
+
+function ScoreDot({ cx, cy, value, stroke }: DotProps) {
+  if (cx === undefined || cy === undefined || value === undefined) {
+    return null;
+  }
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={13} fill={stroke} />
+      <text
+        x={cx}
+        y={cy}
+        dy={4}
+        textAnchor="middle"
+        fontSize={12}
+        fontWeight="bold"
+        fill="#fff"
+      >
+        {value >= MISS_SCORE ? "X" : value}
+      </text>
+    </g>
+  );
+}
+
 export default function WeeklyChart({
   standings,
   today,
@@ -32,6 +61,12 @@ export default function WeeklyChart({
     );
   }
 
+  // Alphabetical, not rank order -- standings is sorted by current total, and
+  // colors need to stay tied to each player's identity, not shift around as
+  // the leaderboard re-sorts day to day.
+  const allNames = standings
+    .map((s) => s.player.name)
+    .sort((a, b) => a.localeCompare(b));
   const dates = standings[0].daily.map((d) => d.date);
   const chartData = dates.map((date, i) => {
     const row: Record<string, string | number> = {
@@ -67,8 +102,8 @@ export default function WeeklyChart({
       <p className="text-xs text-black/50 dark:text-white/50 mb-1">
         Lower on the chart = better that day
       </p>
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={chartData} margin={{ top: 12, right: 12, left: -20 }}>
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={chartData} margin={{ top: 20, right: 20, left: -10 }}>
           <XAxis
             dataKey="date"
             fontSize={13}
@@ -92,7 +127,7 @@ export default function WeeklyChart({
             }}
           />
           {standings.map((s) => {
-            const color = colorForKey(s.player.name);
+            const color = colorForKey(s.player.name, allNames);
             return (
               <Line
                 key={s.player.id}
@@ -101,8 +136,8 @@ export default function WeeklyChart({
                 stroke={color}
                 strokeWidth={3}
                 connectNulls
-                dot={{ r: 5, fill: color, strokeWidth: 0 }}
-                activeDot={{ r: 7, fill: color }}
+                dot={<ScoreDot />}
+                activeDot={<ScoreDot />}
               />
             );
           })}
@@ -111,7 +146,7 @@ export default function WeeklyChart({
 
       <div className="flex flex-wrap justify-center gap-2 mt-2">
         {standings.map((s) => {
-          const color = colorForKey(s.player.name);
+          const color = colorForKey(s.player.name, allNames);
           return (
             <span
               key={s.player.id}
