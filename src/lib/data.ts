@@ -1,14 +1,15 @@
 import "server-only";
 import { supabase } from "@/lib/supabase";
-import { MISS_SCORE } from "@/lib/constants";
+import { MISS_SCORE, hasJoinedBy } from "@/lib/constants";
 
-export { MISS_SCORE };
+export { MISS_SCORE, hasJoinedBy };
 
 export type Player = {
   id: string;
   name: string;
   active: boolean;
   avatar_url: string | null;
+  created_at: string;
 };
 
 export type Week = {
@@ -199,11 +200,24 @@ function buildStandings(
       }));
       const total = daily.reduce((sum, d) => {
         if (d.date > totalCutoff) return sum;
-        return sum + (d.guesses ?? MISS_SCORE);
+        if (d.guesses !== null) return sum + d.guesses; // a real entry always counts
+        if (!isExpectedOn(player, scores, d.date)) return sum; // wasn't around yet
+        return sum + MISS_SCORE;
       }, 0);
       return { player, daily, total };
     })
     .sort((a, b) => a.total - b.total);
+}
+
+/** Whether `player` should be considered part of the group on `date`: either
+ * their profile existed by then, or -- since re-creating a player's row
+ * (e.g. after a data cleanup) doesn't erase the fact they were already
+ * playing -- they have a real logged entry on or before that date. This
+ * keeps backfilled history intact while still not penalizing someone
+ * added mid-week for days before they actually joined. */
+function isExpectedOn(player: Player, scores: Score[], date: string): boolean {
+  if (hasJoinedBy(player, date)) return true;
+  return scores.some((s) => s.player_id === player.id && s.play_date <= date);
 }
 
 /** Per-player totals over an explicit date range (used to settle the
@@ -220,10 +234,10 @@ export function computeStandings(
 }
 
 /** The most recent day (walking backward through `days`) on which every
- * player has some entry (a score or an explicit fail). Days after this are
- * still "in progress" -- not everyone has weighed in yet, so nothing should
- * be settled through them. Returns the day before `days[0]` if no day
- * qualifies yet. */
+ * player expected to be around by then (see isExpectedOn) has some entry
+ * (a score or an explicit fail). Days after this are still "in progress"
+ * -- not everyone has weighed in yet, so nothing should be settled
+ * through them. Returns the day before `days[0]` if no day qualifies yet. */
 export function getLastCompleteDay(
   players: Player[],
   scores: Score[],
@@ -232,7 +246,13 @@ export function getLastCompleteDay(
   const logged = new Set(scores.map((s) => `${s.player_id}_${s.play_date}`));
   for (let i = days.length - 1; i >= 0; i--) {
     const date = days[i];
-    if (players.every((p) => logged.has(`${p.id}_${date}`))) return date;
+    const expected = players.filter((p) => isExpectedOn(p, scores, date));
+    if (
+      expected.length > 0 &&
+      expected.every((p) => logged.has(`${p.id}_${date}`))
+    ) {
+      return date;
+    }
   }
   return addDays(days[0], -1);
 }

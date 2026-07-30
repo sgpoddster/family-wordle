@@ -18,3 +18,14 @@ export function colorForKey(key: string): string {
   }
   return PLAYER_COLORS[Math.abs(hash) % PLAYER_COLORS.length];
 }
+
+/** Whether a player had already joined as of `date` -- someone added
+ * partway through a week can't be expected to have logged (or be
+ * penalized for missing) days before they existed. Lives here (not
+ * lib/data.ts) so client components can safely import it too. */
+export function hasJoinedBy(
+  player: { created_at: string },
+  date: string
+): boolean {
+  return player.created_at.slice(0, 10) <= date;
+}

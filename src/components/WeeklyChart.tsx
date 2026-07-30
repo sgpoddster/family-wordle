@@ -9,7 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import Avatar from "@/components/Avatar";
-import { MISS_SCORE, colorForKey } from "@/lib/constants";
+import { MISS_SCORE, colorForKey, hasJoinedBy } from "@/lib/constants";
 import type { Player } from "@/lib/data";
 
 type Standing = {
@@ -45,11 +45,19 @@ export default function WeeklyChart({
       if (guesses !== null) {
         row[s.player.name] = guesses;
       } else if (isPast) {
-        row[s.player.name] = MISS_SCORE;
+        // Was this player already around by this day? Either their profile
+        // predates it, or they've got a real entry earlier this week --
+        // re-creating a player's row doesn't erase that they were playing.
+        const hasEarlierEntry = s.daily
+          .slice(0, i)
+          .some((d) => d.guesses !== null);
+        if (hasJoinedBy(s.player, date) || hasEarlierEntry) {
+          row[s.player.name] = MISS_SCORE;
+        }
       }
-      // today or future with nothing logged yet: leave unset, so the line
-      // simply doesn't extend past that player's last real day until they
-      // actually log -- no point plotted, no premature drop to a miss.
+      // today, future, or before this player joined: leave unset, so the
+      // line simply doesn't extend there until they actually log -- no
+      // point plotted, no premature or retroactive drop to a miss.
     }
     return row;
   });

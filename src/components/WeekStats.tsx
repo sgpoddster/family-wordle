@@ -4,7 +4,7 @@ import StatsAvatar from "@/components/StatsAvatar";
 import StreakBadges from "@/components/StreakBadges";
 import WeeklyChart from "@/components/WeeklyChart";
 import { MISS_SCORE } from "@/lib/constants";
-import type { Player, Streaks } from "@/lib/data";
+import { hasJoinedBy, type Player, type Streaks } from "@/lib/data";
 
 type Standing = {
   player: Player;
@@ -26,9 +26,17 @@ export default function WeekStats({
   completeThrough?: string;
 }) {
   const days = standings[0]?.daily.map((d) => d.date) ?? [];
-  const fullyLoggedDays = days.filter((_, i) =>
-    standings.every((s) => s.daily[i]?.guesses !== null)
-  ).length;
+  const fullyLoggedDays = days.filter((date, i) => {
+    const expected = standings.filter(
+      (s) =>
+        hasJoinedBy(s.player, date) ||
+        s.daily.slice(0, i).some((d) => d.guesses !== null)
+    );
+    return (
+      expected.length > 0 &&
+      expected.every((s) => s.daily[i]?.guesses !== null)
+    );
+  }).length;
   const asOfLabel =
     completeThrough && days.includes(completeThrough)
       ? new Date(completeThrough + "T00:00:00").toLocaleDateString(undefined, {
