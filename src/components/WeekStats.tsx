@@ -17,16 +17,24 @@ export default function WeekStats({
   hasScores,
   today,
   streaks,
+  completeThrough,
 }: {
   standings: Standing[];
   hasScores: boolean;
   today: string;
   streaks?: Map<string, Streaks>;
+  completeThrough?: string;
 }) {
   const days = standings[0]?.daily.map((d) => d.date) ?? [];
   const fullyLoggedDays = days.filter((_, i) =>
     standings.every((s) => s.daily[i]?.guesses !== null)
   ).length;
+  const asOfLabel =
+    completeThrough && days.includes(completeThrough)
+      ? new Date(completeThrough + "T00:00:00").toLocaleDateString(undefined, {
+          weekday: "long",
+        })
+      : null;
 
   return (
     <>
@@ -39,7 +47,9 @@ export default function WeekStats({
       )}
 
       <div>
-        <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
+        <h2 className="text-lg font-semibold mb-3">
+          Leaderboard{asOfLabel && ` (as of ${asOfLabel})`}
+        </h2>
         <ol className="space-y-2">
           {standings.map((s, i) => {
             return (

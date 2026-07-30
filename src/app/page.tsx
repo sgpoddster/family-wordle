@@ -32,7 +32,11 @@ export default async function EntryPage() {
   }
 
   const scores = await getScoresForWeek(week.id);
-  const standings = computeWeekStandings(players, scores, today);
+  const { standings, completeThrough } = computeWeekStandings(
+    players,
+    scores,
+    today
+  );
   const recentScores = await getRecentScores(addDays(today, -60));
   const streaks = computeStreaks(players, recentScores, today);
 
@@ -47,6 +51,7 @@ export default async function EntryPage() {
           )}
           today={today}
           streaks={streaks}
+          completeThrough={completeThrough}
         />
       </div>
 

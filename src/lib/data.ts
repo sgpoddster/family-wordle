@@ -183,9 +183,8 @@ export async function getRecentScores(sinceDate: string): Promise<Score[]> {
 function buildStandings(
   players: Player[],
   scores: Score[],
-  days: string[],
-  today: string,
-  penalizeToday: boolean
+  displayDays: string[],
+  totalCutoff: string
 ) {
   const byPlayerDate = new Map<string, number>();
   for (const s of scores) {
@@ -194,15 +193,12 @@ function buildStandings(
 
   return players
     .map((player) => {
-      const daily = days.map((date) => ({
+      const daily = displayDays.map((date) => ({
         date,
         guesses: byPlayerDate.get(`${player.id}_${date}`) ?? null,
       }));
       const total = daily.reduce((sum, d) => {
-        if (d.date > today) return sum; // hasn't happened yet, don't penalize
-        if (d.date === today && !penalizeToday && d.guesses === null) {
-          return sum; // today isn't settled yet -- don't penalize until logged
-        }
+        if (d.date > totalCutoff) return sum;
         return sum + (d.guesses ?? MISS_SCORE);
       }, 0);
       return { player, daily, total };
@@ -220,39 +216,53 @@ export function computeStandings(
   startDate: string,
   through: string
 ) {
-  return buildStandings(
-    players,
-    scores,
-    dateRange(startDate, through),
-    through,
-    true
-  );
+  return buildStandings(players, scores, dateRange(startDate, through), through);
 }
 
-/** Per-player totals for the calendar week containing `today`: always spans
- * Monday through Sunday (so the chart/leaderboard has a stable shape and
- * rolls over to a fresh week automatically), expanded backward to cover
- * any backfilled score dated before that Monday. Days after `today` show
- * as blank (not yet played) rather than being penalized as a miss, and
- * today itself isn't penalized until it's actually logged -- the day
- * isn't over yet, so an unlogged "today" isn't a miss (yet). */
+/** The most recent day (walking backward through `days`) on which every
+ * player has some entry (a score or an explicit fail). Days after this are
+ * still "in progress" -- not everyone has weighed in yet, so nothing should
+ * be settled through them. Returns the day before `days[0]` if no day
+ * qualifies yet. */
+export function getLastCompleteDay(
+  players: Player[],
+  scores: Score[],
+  days: string[]
+): string {
+  const logged = new Set(scores.map((s) => `${s.player_id}_${s.play_date}`));
+  for (let i = days.length - 1; i >= 0; i--) {
+    const date = days[i];
+    if (players.every((p) => logged.has(`${p.id}_${date}`))) return date;
+  }
+  return addDays(days[0], -1);
+}
+
+/** Live standings for the calendar week containing `today`: the chart
+ * always spans the full Monday-Sunday week (expanded backward to cover any
+ * backfilled score dated before that Monday), but the leaderboard total
+ * only settles through the last day everyone has actually weighed in on --
+ * an in-progress day where some people haven't logged yet doesn't count
+ * against anyone until it's complete. */
 export function computeWeekStandings(
   players: Player[],
   scores: Score[],
   today: string
-) {
+): { standings: ReturnType<typeof buildStandings>; completeThrough: string } {
   const { monday, sunday } = getWeekBounds(today);
   const earliestScoreDate = scores.reduce(
     (min, s) => (s.play_date < min ? s.play_date : min),
     monday
   );
-  return buildStandings(
+  const displayDays = dateRange(earliestScoreDate, sunday);
+  const completeThrough = getLastCompleteDay(
     players,
     scores,
-    dateRange(earliestScoreDate, sunday),
-    today,
-    false
+    displayDays.filter((d) => d <= today)
   );
+  return {
+    standings: buildStandings(players, scores, displayDays, completeThrough),
+    completeThrough,
+  };
 }
 
 export type Streaks = { played: number; leader: number };

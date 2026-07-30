@@ -21,7 +21,11 @@ export default async function DashboardPage() {
   const scores = await getScoresForWeek(week.id);
   const today = todayStr();
   const { monday, sunday } = getWeekBounds(today);
-  const standings = computeWeekStandings(players, scores, today);
+  const { standings, completeThrough } = computeWeekStandings(
+    players,
+    scores,
+    today
+  );
   const hasScores = standings.some((s) =>
     s.daily.some((d) => d.guesses !== null)
   );
@@ -60,6 +64,7 @@ export default async function DashboardPage() {
           hasScores={hasScores}
           today={today}
           streaks={streaks}
+          completeThrough={completeThrough}
         />
       )}
     </div>

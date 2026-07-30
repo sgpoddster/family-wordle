@@ -40,7 +40,11 @@ export async function submitScore(
   const week = await getActiveWeek();
   const today = todayStr();
   const players = await getActivePlayers();
-  const before = computeWeekStandings(players, await getScoresForWeek(week.id), today);
+  const before = computeWeekStandings(
+    players,
+    await getScoresForWeek(week.id),
+    today
+  ).standings;
 
   const { error } = await supabase.from("scores").upsert(
     {
@@ -56,7 +60,11 @@ export async function submitScore(
   revalidatePath("/");
   revalidatePath("/dashboard");
 
-  const after = computeWeekStandings(players, await getScoresForWeek(week.id), today);
+  const after = computeWeekStandings(
+    players,
+    await getScoresForWeek(week.id),
+    today
+  ).standings;
   const beforeLeaderId = before[0]?.player.id ?? null;
   const afterLeaderId = after[0]?.player.id ?? null;
   const leaderChanged =
