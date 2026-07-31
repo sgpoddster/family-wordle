@@ -12,6 +12,10 @@ import {
   todayStr,
 } from "@/lib/data";
 
+// Scores can change at any moment (submissions, corrections) -- this page
+// must never serve a statically prerendered, edge-cached snapshot.
+export const dynamic = "force-dynamic";
+
 export default async function EntryPage() {
   const [players, week] = await Promise.all([
     getActivePlayers(),

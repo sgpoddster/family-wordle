@@ -9,6 +9,8 @@ import {
   type Player,
 } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 function topEntry(counts: Map<string, number>): [string, number] | null {
   let top: [string, number] | null = null;
   for (const entry of counts) {

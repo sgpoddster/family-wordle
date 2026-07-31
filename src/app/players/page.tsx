@@ -2,6 +2,8 @@ import { addPlayer, setPlayerActive } from "@/app/actions";
 import AvatarUpload from "@/components/AvatarUpload";
 import { getAllPlayers } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlayersPage() {
   const players = await getAllPlayers();
 

@@ -8,6 +8,8 @@ import {
   getScoresForWeek,
 } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 const NAIL_BITER_MARGIN = 2;
 const MEDALS = ["🥇", "🥈", "🥉"];
 

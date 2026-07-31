@@ -13,6 +13,8 @@ import {
   todayStr,
 } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [players, week] = await Promise.all([
     getActivePlayers(),
