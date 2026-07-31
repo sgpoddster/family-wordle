@@ -23,17 +23,29 @@ type DotProps = {
   value?: number;
   stroke?: string;
   payload?: Record<string, string | number>;
+  assumed?: boolean;
 };
 
 const TIE_SPREAD = 18;
 
-function ScoreDot({ cx, cy, value, stroke }: DotProps) {
+// `assumed` marks a day nobody actually logged yet, where we're just
+// guessing a miss because the day's past -- drawn hollow/dashed with a "?"
+// so it never reads the same as a real, confirmed fail (solid "X").
+function ScoreDot({ cx, cy, value, stroke, assumed }: DotProps) {
   if (cx === undefined || cy === undefined || value === undefined) {
     return null;
   }
   return (
     <g>
-      <circle cx={cx} cy={cy} r={13} fill={stroke} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={13}
+        fill={assumed ? "none" : stroke}
+        stroke={stroke}
+        strokeWidth={assumed ? 2 : 0}
+        strokeDasharray={assumed ? "3 2" : undefined}
+      />
       <text
         x={cx}
         y={cy}
@@ -41,9 +53,9 @@ function ScoreDot({ cx, cy, value, stroke }: DotProps) {
         textAnchor="middle"
         fontSize={12}
         fontWeight="bold"
-        fill="#fff"
+        fill={assumed ? stroke : "#fff"}
       >
-        {value >= MISS_SCORE ? "X" : value}
+        {assumed ? "?" : value >= MISS_SCORE ? "X" : value}
       </text>
     </g>
   );
@@ -52,21 +64,26 @@ function ScoreDot({ cx, cy, value, stroke }: DotProps) {
 // Two players who score the same on the same day land on the exact same
 // point -- nudge each apart horizontally so both circles stay visible
 // instead of one silently hiding behind the other.
-function makeTieAwareDot(playerName: string, allNames: string[]) {
+function makeTieAwareDot(
+  playerName: string,
+  allNames: string[],
+  assumedKeys: Set<string>
+) {
   return function TieAwareDot(props: DotProps) {
     const { cx, cy, value, payload } = props;
     if (cx === undefined || value === undefined || !payload) {
       return <ScoreDot {...props} />;
     }
+    const assumed = assumedKeys.has(`${payload.isoDate}_${playerName}`);
     const tied = allNames
       .filter((name) => payload[name] === value)
       .sort((a, b) => a.localeCompare(b));
     if (tied.length <= 1) {
-      return <ScoreDot {...props} />;
+      return <ScoreDot {...props} assumed={assumed} />;
     }
     const slot = tied.indexOf(playerName);
     const dx = (slot - (tied.length - 1) / 2) * TIE_SPREAD;
-    return <ScoreDot {...props} cx={cx + dx} cy={cy} />;
+    return <ScoreDot {...props} cx={cx + dx} cy={cy} assumed={assumed} />;
   };
 }
 
@@ -92,11 +109,13 @@ export default function WeeklyChart({
     .map((s) => s.player.name)
     .sort((a, b) => a.localeCompare(b));
   const dates = standings[0].daily.map((d) => d.date);
+  const assumedKeys = new Set<string>();
   const chartData = dates.map((date, i) => {
     const row: Record<string, string | number> = {
       date: new Date(date + "T00:00:00").toLocaleDateString(undefined, {
         weekday: "short",
       }),
+      isoDate: date,
     };
     const isPast = date < today;
     for (const s of standings) {
@@ -112,6 +131,7 @@ export default function WeeklyChart({
           .some((d) => d.guesses !== null);
         if (hasJoinedBy(s.player, date) || hasEarlierEntry) {
           row[s.player.name] = MISS_SCORE;
+          assumedKeys.add(`${date}_${s.player.name}`);
         }
       }
       // today, future, or before this player joined: leave unset, so the
@@ -124,7 +144,9 @@ export default function WeeklyChart({
   return (
     <div>
       <p className="text-xs text-black/50 dark:text-white/50 mb-1">
-        Lower on the chart = better that day
+        Lower on the chart = better that day. A hollow{" "}
+        <span className="font-semibold">?</span> means they haven&apos;t
+        logged that day yet.
       </p>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData} margin={{ top: 20, right: 20, left: -10 }}>
@@ -152,7 +174,11 @@ export default function WeeklyChart({
           />
           {standings.map((s) => {
             const color = colorForKey(s.player.name, allNames);
-            const tieAwareDot = makeTieAwareDot(s.player.name, allNames);
+            const tieAwareDot = makeTieAwareDot(
+              s.player.name,
+              allNames,
+              assumedKeys
+            );
             return (
               <Line
                 key={s.player.id}
