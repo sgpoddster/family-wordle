@@ -37,8 +37,11 @@ export type Score = {
   guesses: number;
 };
 
+// Vercel's serverless functions run in UTC regardless of where the family
+// actually is, so "today" must be pinned to Singapore time explicitly --
+// otherwise the server's day rolls over up to 8 hours behind real SGT.
 function todayStr(): string {
-  return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local time
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
 }
 
 function addDays(dateStr: string, days: number): string {
