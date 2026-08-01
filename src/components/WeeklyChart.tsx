@@ -51,21 +51,26 @@ function makeBarShape(color: string) {
     const rectX = Number(x);
     const rectY = Number(y);
     const rectWidth = Number(width);
-    const text = payload.assumed
+    const rectHeight = Number(height);
+    const aboveLabel = payload.assumed
       ? "?"
+      : payload.value >= MISS_SCORE
+        ? "X"
+        : payload.value;
+    const insideEmoji = payload.assumed
+      ? null
       : payload.value >= MISS_SCORE
         ? "😢"
         : payload.value === 2 || payload.value === 3
           ? "😊"
-          : payload.value;
-    const isEmoji = text === "😢" || text === "😊";
+          : null;
     return (
       <g>
         <rect
           x={rectX}
           y={rectY}
           width={rectWidth}
-          height={Number(height)}
+          height={rectHeight}
           rx={4}
           fill={payload.assumed ? "none" : color}
           stroke={payload.assumed ? color : undefined}
@@ -74,14 +79,25 @@ function makeBarShape(color: string) {
         />
         <text
           x={rectX + rectWidth / 2}
-          y={rectY - (isEmoji ? 8 : 6)}
+          y={rectY - 6}
           textAnchor="middle"
-          fontSize={isEmoji ? 16 : 13}
+          fontSize={13}
           fontWeight="bold"
           fill={color}
         >
-          {text}
+          {aboveLabel}
         </text>
+        {insideEmoji && (
+          <text
+            x={rectX + rectWidth / 2}
+            y={rectY + rectHeight / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={14}
+          >
+            {insideEmoji}
+          </text>
+        )}
       </g>
     );
   };
