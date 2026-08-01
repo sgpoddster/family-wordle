@@ -54,8 +54,11 @@ function makeBarShape(color: string) {
     const text = payload.assumed
       ? "?"
       : payload.value >= MISS_SCORE
-        ? "X"
-        : payload.value;
+        ? "😢"
+        : payload.value === 2 || payload.value === 3
+          ? "😊"
+          : payload.value;
+    const isEmoji = text === "😢" || text === "😊";
     return (
       <g>
         <rect
@@ -71,9 +74,9 @@ function makeBarShape(color: string) {
         />
         <text
           x={rectX + rectWidth / 2}
-          y={rectY - 6}
+          y={rectY - (isEmoji ? 8 : 6)}
           textAnchor="middle"
-          fontSize={13}
+          fontSize={isEmoji ? 16 : 13}
           fontWeight="bold"
           fill={color}
         >
