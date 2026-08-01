@@ -1,16 +1,19 @@
 export const MISS_SCORE = 8;
 
+// Tailwind's "-400" shades -- muted enough to sit comfortably on a zinc-950
+// background without turning into a wall of pure neon, but still distinct
+// and readable at a glance.
 export const PLAYER_COLORS = [
-  "#6aaa64",
-  "#c9b458",
-  "#3a86ff",
-  "#e07a5f",
-  "#9b5de5",
-  "#f15bb5",
-  "#00bbf9",
-  "#ff6b6b",
-  "#4dd4ac",
-  "#f4a259",
+  "#34d399", // emerald-400
+  "#38bdf8", // sky-400
+  "#fbbf24", // amber-400
+  "#fb7185", // rose-400
+  "#a78bfa", // violet-400
+  "#e879f9", // fuchsia-400
+  "#22d3ee", // cyan-400
+  "#fb923c", // orange-400
+  "#2dd4bf", // teal-400
+  "#a3e635", // lime-400
 ];
 
 /**

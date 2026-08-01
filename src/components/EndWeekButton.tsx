@@ -34,23 +34,23 @@ export default function EndWeekButton({
 
   if (phase !== "idle") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-        <div className="relative w-full max-w-xs overflow-hidden rounded-2xl bg-[#1e1e1e] px-6 py-10 text-center shadow-2xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+        <div className="relative w-full max-w-xs overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-10 text-center shadow-2xl">
           {phase === "drumroll" ? (
-            <p className="animate-pulse text-xl font-semibold text-white">
+            <p className="animate-pulse text-xl font-semibold text-zinc-100">
               🥁 Tallying up the results…
             </p>
           ) : phase === "error" ? (
             <>
-              <p className="text-xl font-semibold text-white">
+              <p className="text-xl font-semibold text-zinc-100">
                 😬 Something went wrong
               </p>
-              <p className="mt-2 text-sm text-white/60">
+              <p className="mt-2 text-sm text-zinc-400">
                 The week wasn&apos;t ended &mdash; please try again.
               </p>
               <button
                 onClick={() => setPhase("idle")}
-                className="mt-6 rounded-md bg-[#6aaa64] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5a9654] transition-colors"
+                className="mt-6 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-emerald-500/30"
               >
                 Okay
               </button>
@@ -64,14 +64,14 @@ export default function EndWeekButton({
                   className="flex flex-col items-center gap-3"
                 >
                   <Avatar name={winner.name} avatarUrl={winner.avatar_url} size={72} />
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-zinc-100">
                     🏆 {winner.name} wins the week!
                   </p>
                 </div>
               )}
               <button
                 onClick={() => setPhase("idle")}
-                className="mt-6 rounded-md bg-[#6aaa64] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5a9654] transition-colors"
+                className="mt-6 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-emerald-500/30"
               >
                 Nice!
               </button>
@@ -86,7 +86,7 @@ export default function EndWeekButton({
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className="rounded-full border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900"
       >
         End Week
       </button>
@@ -94,17 +94,17 @@ export default function EndWeekButton({
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-sm text-zinc-300">
       <span>Lock in the winner and start a new week?</span>
       <button
         onClick={start}
-        className="rounded-md bg-[#6aaa64] px-3 py-1.5 font-medium text-white hover:bg-[#5a9654] transition-colors"
+        className="rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 px-3 py-1.5 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
       >
         Yes, end it
       </button>
       <button
         onClick={() => setConfirming(false)}
-        className="rounded-md px-3 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className="rounded-full px-3 py-1.5 font-medium text-zinc-400 transition-colors hover:bg-zinc-900"
       >
         Cancel
       </button>

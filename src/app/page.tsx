@@ -25,9 +25,9 @@ export default async function EntryPage() {
 
   if (players.length === 0) {
     return (
-      <div className="text-center text-black/60 dark:text-white/60">
+      <div className="text-center text-zinc-400">
         <p>No family members yet.</p>
-        <a href="/players" className="underline">
+        <a href="/players" className="text-emerald-400 underline hover:text-emerald-300">
           Add someone on the Players page
         </a>{" "}
         to get started.
@@ -45,9 +45,11 @@ export default async function EntryPage() {
   const streaks = computeStreaks(players, recentScores, today);
 
   return (
-    <div className="space-y-12">
-      <div className="space-y-8">
-        <h1 className="text-2xl font-bold">This week so far</h1>
+    <div className="space-y-14">
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+          This week so far
+        </h1>
         <WeekStats
           standings={standings}
           hasScores={standings.some((s) =>
@@ -59,10 +61,12 @@ export default async function EntryPage() {
         />
       </div>
 
-      <div className="space-y-6 border-t border-black/10 dark:border-white/10 pt-8">
+      <div className="space-y-6 border-t border-zinc-800 pt-10">
         <div>
-          <h2 className="text-xl font-bold">Log a score</h2>
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <h2 className="text-xl font-bold tracking-tight text-zinc-50">
+            Log a score
+          </h2>
+          <p className="text-sm text-zinc-400">
             Lower is better &mdash; a fail or a missed day counts as{" "}
             {MISS_SCORE}.
           </p>

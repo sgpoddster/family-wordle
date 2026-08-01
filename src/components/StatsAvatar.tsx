@@ -9,11 +9,13 @@ export default function StatsAvatar({
   name,
   avatarUrl,
   size = 36,
+  color,
 }: {
   playerId: string;
   name: string;
   avatarUrl: string | null;
   size?: number;
+  color?: string;
 }) {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [open, setOpen] = useState(false);
@@ -35,7 +37,7 @@ export default function StatsAvatar({
         onClick={handleClick}
         className="shrink-0 rounded-full"
       >
-        <Avatar name={name} avatarUrl={avatarUrl} size={size} />
+        <Avatar name={name} avatarUrl={avatarUrl} size={size} color={color} />
       </button>
 
       {open && (
@@ -46,10 +48,10 @@ export default function StatsAvatar({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ animation: "pop-in 0.2s ease-out" }}
-            className="w-full max-w-xs rounded-2xl bg-[#1e1e1e] px-6 py-6 text-center shadow-2xl"
+            className="w-full max-w-xs rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-6 text-center shadow-2xl"
           >
             <div className="flex flex-col items-center">
-              <Avatar name={name} avatarUrl={avatarUrl} size={72} />
+              <Avatar name={name} avatarUrl={avatarUrl} size={72} color={color} />
               <p className="mt-3 text-xl font-bold text-white">{name}</p>
             </div>
 
@@ -69,7 +71,7 @@ export default function StatsAvatar({
                   />
                 </div>
 
-                <div className="mt-4 border-t border-white/10 pt-4 text-left">
+                <div className="mt-4 border-t border-zinc-800 pt-4 text-left">
                   <p className="text-xs text-white/50 mb-2">Trophy case</p>
                   {stats.weeksWon > 0 ||
                   stats.comebackAwards > 0 ||
@@ -102,7 +104,7 @@ export default function StatsAvatar({
 
             <button
               onClick={() => setOpen(false)}
-              className="mt-6 rounded-md bg-[#6aaa64] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5a9654] transition-colors"
+              className="mt-6 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-emerald-500/30"
             >
               Close
             </button>

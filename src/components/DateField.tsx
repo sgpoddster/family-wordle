@@ -23,7 +23,7 @@ export default function DateField({ today }: { today: string }) {
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">Date</label>
+      <label className="mb-2 block text-sm font-medium text-zinc-300">Date</label>
       <input type="hidden" name="playDate" value={selected} />
       <div className="flex flex-wrap gap-2">
         {quickDates.map((date) => (
@@ -34,10 +34,10 @@ export default function DateField({ today }: { today: string }) {
               setSelected(date);
               setShowCustom(false);
             }}
-            className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
               !showCustom && selected === date
-                ? "bg-[#6aaa64] text-white border-[#6aaa64]"
-                : "border-black/15 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+                ? "border-transparent bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/20"
+                : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:bg-zinc-800/40"
             }`}
           >
             {label(date, today)}
@@ -46,10 +46,10 @@ export default function DateField({ today }: { today: string }) {
         <button
           type="button"
           onClick={() => setShowCustom(true)}
-          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
             showCustom
-              ? "bg-[#6aaa64] text-white border-[#6aaa64]"
-              : "border-black/15 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+              ? "border-transparent bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/20"
+              : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:bg-zinc-800/40"
           }`}
         >
           Older…
@@ -62,7 +62,7 @@ export default function DateField({ today }: { today: string }) {
           value={selected}
           max={today}
           onChange={(e) => setSelected(e.target.value)}
-          className="mt-2 w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
+          className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-zinc-100 [color-scheme:dark]"
         />
       )}
     </div>

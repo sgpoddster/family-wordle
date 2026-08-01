@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Avatar from "@/components/Avatar";
 import { MISS_SCORE, colorForKey, hasJoinedBy } from "@/lib/constants";
 import type { Player } from "@/lib/data";
@@ -25,17 +25,31 @@ type ShapeProps = {
   payload?: DayBar;
 };
 
+const BAR_RADIUS = 6;
+
 function weekdayLabel(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "short",
   });
 }
 
+// Path for a rectangle with only its top two corners rounded -- a plain
+// SVG <rect rx> rounds all four, which looks wrong sitting on a baseline.
+function roundedTopRectPath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.max(0, Math.min(radius, width / 2, height));
+  return `M${x},${y + height} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + width - r},${y} Q${x + width},${y} ${x + width},${y + r} L${x + width},${y + height} Z`;
+}
+
 // `assumed` (hasn't logged yet, we're just guessing a miss because the day's
 // past) draws hollow/dashed with a "?" so it never looks like a real,
-// confirmed fail (solid bar, "X"). The value label is drawn as part of the
-// same shape rather than via Bar's separate `label` prop, which doesn't
-// reliably receive `payload` in this recharts version.
+// confirmed fail. The actual emoji/detail lives in the Tooltip now, not
+// crammed into the bar itself.
 function makeBarShape(color: string) {
   return function BarShape({ x, y, width, height, payload }: ShapeProps) {
     if (
@@ -52,55 +66,71 @@ function makeBarShape(color: string) {
     const rectY = Number(y);
     const rectWidth = Number(width);
     const rectHeight = Number(height);
-    const aboveLabel = payload.assumed
+    const path = roundedTopRectPath(rectX, rectY, rectWidth, rectHeight, BAR_RADIUS);
+    const label = payload.assumed
       ? "?"
       : payload.value >= MISS_SCORE
         ? "X"
         : payload.value;
-    const insideEmoji = payload.assumed
-      ? null
-      : payload.value >= MISS_SCORE
-        ? "😢"
-        : payload.value === 2 || payload.value === 3
-          ? "😊"
-          : null;
     return (
       <g>
-        <rect
-          x={rectX}
-          y={rectY}
-          width={rectWidth}
-          height={rectHeight}
-          rx={4}
+        <path
+          d={path}
           fill={payload.assumed ? "none" : color}
           stroke={payload.assumed ? color : undefined}
-          strokeWidth={payload.assumed ? 2 : 0}
+          strokeWidth={payload.assumed ? 1.5 : 0}
           strokeDasharray={payload.assumed ? "4 3" : undefined}
+          opacity={payload.assumed ? 0.7 : 1}
         />
         <text
           x={rectX + rectWidth / 2}
-          y={rectY - 6}
+          y={rectY - 7}
           textAnchor="middle"
-          fontSize={13}
-          fontWeight="bold"
-          fill={color}
+          fontSize={11}
+          fontWeight={600}
+          className="fill-zinc-400"
         >
-          {aboveLabel}
+          {label}
         </text>
-        {insideEmoji && (
-          <text
-            x={rectX + rectWidth / 2}
-            y={rectY + rectHeight / 2}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={14}
-          >
-            {insideEmoji}
-          </text>
-        )}
       </g>
     );
   };
+}
+
+function ChartTooltip({
+  active,
+  payload,
+  color,
+}: {
+  active?: boolean;
+  payload?: { payload: DayBar }[];
+  color: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const day = payload[0].payload;
+  if (day.blank) return null;
+
+  let detail: string;
+  let emoji: string | null = null;
+  if (day.assumed) {
+    detail = "Not logged yet";
+  } else if (day.value >= MISS_SCORE) {
+    detail = "Failed";
+    emoji = "😢";
+  } else {
+    detail = `${day.value} ${day.value === 1 ? "guess" : "guesses"}`;
+    if (day.value === 2 || day.value === 3) emoji = "😊";
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 text-sm shadow-xl shadow-black/40 backdrop-blur">
+      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+      <span className="font-medium text-zinc-200">{day.date}</span>
+      <span className="text-zinc-500">&middot;</span>
+      <span className="text-zinc-300">{detail}</span>
+      {emoji && <span>{emoji}</span>}
+    </div>
+  );
 }
 
 export default function WeeklyChart({
@@ -111,11 +141,7 @@ export default function WeeklyChart({
   today: string;
 }) {
   if (standings.length === 0 || standings[0].daily.length === 0) {
-    return (
-      <p className="text-sm text-black/60 dark:text-white/60">
-        No scores logged yet this week.
-      </p>
-    );
+    return <p className="text-sm text-zinc-500">No scores logged yet this week.</p>;
   }
 
   // Alphabetical, not rank order -- colors need to stay tied to each
@@ -126,12 +152,12 @@ export default function WeeklyChart({
 
   return (
     <div>
-      <p className="text-xs text-black/50 dark:text-white/50 mb-3">
+      <p className="mb-3 text-xs text-zinc-500">
         Taller bar = more guesses that day. A hollow{" "}
-        <span className="font-semibold">?</span> means they haven&apos;t
-        logged that day yet.
+        <span className="font-semibold text-zinc-400">?</span> means they
+        haven&apos;t logged that day yet.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {standings.map((s) => {
           const color = colorForKey(s.player.name, allNames);
           const data: DayBar[] = s.daily.map((d, i) => {
@@ -159,10 +185,15 @@ export default function WeeklyChart({
           return (
             <div
               key={s.player.id}
-              className="rounded-lg border border-black/10 dark:border-white/10 p-3"
+              className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg shadow-black/20"
             >
-              <div className="flex items-center gap-2 mb-1">
-                <Avatar name={s.player.name} avatarUrl={s.player.avatar_url} size={24} />
+              <div className="mb-1 flex items-center gap-2">
+                <Avatar
+                  name={s.player.name}
+                  avatarUrl={s.player.avatar_url}
+                  size={24}
+                  color={color}
+                />
                 <span className="text-sm font-semibold" style={{ color }}>
                   {s.player.name}
                 </span>
@@ -173,7 +204,8 @@ export default function WeeklyChart({
                     dataKey="date"
                     fontSize={11}
                     tickLine={false}
-                    axisLine={{ stroke: "currentColor", opacity: 0.15 }}
+                    axisLine={false}
+                    stroke="#71717a"
                   />
                   <YAxis
                     domain={[0, MISS_SCORE]}
@@ -182,6 +214,11 @@ export default function WeeklyChart({
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
+                    stroke="#71717a"
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    content={<ChartTooltip color={color} />}
                   />
                   <Bar
                     dataKey="value"

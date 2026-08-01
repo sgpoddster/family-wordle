@@ -3,7 +3,7 @@ import Podium from "@/components/Podium";
 import StatsAvatar from "@/components/StatsAvatar";
 import StreakBadges from "@/components/StreakBadges";
 import WeeklyChart from "@/components/WeeklyChart";
-import { MISS_SCORE } from "@/lib/constants";
+import { MISS_SCORE, colorForKey } from "@/lib/constants";
 import { hasJoinedBy, type Player, type Streaks } from "@/lib/data";
 
 type Standing = {
@@ -43,6 +43,11 @@ export default function WeekStats({
           weekday: "long",
         })
       : null;
+  // Alphabetical, not rank order -- colors need to stay tied to each
+  // player's identity, not shift around as the leaderboard re-sorts.
+  const allNames = standings
+    .map((s) => s.player.name)
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <>
@@ -55,7 +60,7 @@ export default function WeekStats({
       )}
 
       <div>
-        <h2 className="text-lg font-semibold mb-3">
+        <h2 className="mb-3 text-lg font-semibold text-zinc-100">
           Leaderboard{asOfLabel && ` (as of ${asOfLabel})`}
         </h2>
         <ol className="space-y-2">
@@ -63,18 +68,19 @@ export default function WeekStats({
             return (
               <li
                 key={s.player.id}
-                className={`flex items-center justify-between rounded-md border px-4 py-2.5 transition-transform ${
+                className={`flex items-center justify-between rounded-xl border px-4 py-2.5 transition-transform ${
                   i === 0 && hasScores
-                    ? "border-[#6aaa64]/50 bg-[#6aaa64]/5 scale-[1.02]"
-                    : "border-black/10 dark:border-white/10"
+                    ? "scale-[1.02] border-emerald-400/40 bg-emerald-400/5 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-400/20"
+                    : "border-zinc-800 bg-zinc-900/40"
                 }`}
               >
-                <span className="flex items-center gap-3 font-medium">
+                <span className="flex items-center gap-3 font-medium text-zinc-100">
                   <StatsAvatar
                     playerId={s.player.id}
                     name={s.player.name}
                     avatarUrl={s.player.avatar_url}
                     size={36}
+                    color={colorForKey(s.player.name, allNames)}
                   />
                   {s.player.name}
                   {streaks && (
@@ -84,14 +90,12 @@ export default function WeekStats({
                     />
                   )}
                 </span>
-                <span className="text-sm text-black/60 dark:text-white/60">
-                  {s.total} pts
-                </span>
+                <span className="text-sm text-zinc-400">{s.total} pts</span>
               </li>
             );
           })}
         </ol>
-        <p className="mt-2 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-2 text-xs text-zinc-500">
           Lowest total wins &mdash; a miss counts as {MISS_SCORE}.
         </p>
       </div>

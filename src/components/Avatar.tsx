@@ -4,12 +4,14 @@ export default function Avatar({
   name,
   avatarUrl,
   size = 40,
+  color,
 }: {
   name: string;
   avatarUrl: string | null;
   size?: number;
+  color?: string;
 }) {
-  const color = colorForKey(name);
+  color ??= colorForKey(name);
   const initial = name.trim().charAt(0).toUpperCase() || "?";
 
   if (avatarUrl) {

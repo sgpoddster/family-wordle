@@ -46,8 +46,10 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">This week</h1>
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+            This week
+          </h1>
+          <p className="text-sm text-zinc-400">
             {formatDate(monday)} – {formatDate(sunday)}
           </p>
         </div>
@@ -57,7 +59,7 @@ export default async function DashboardPage() {
       </div>
 
       {players.length === 0 ? (
-        <p className="text-black/60 dark:text-white/60">
+        <p className="text-zinc-400">
           Add family members on the Players page to start tracking.
         </p>
       ) : (

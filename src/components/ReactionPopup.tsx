@@ -43,18 +43,18 @@ export default function ReactionPopup({
     >
       <div
         style={{ animation: "pop-in 0.25s ease-out" }}
-        className="relative w-full max-w-xs overflow-hidden rounded-2xl bg-[#1e1e1e] px-6 py-8 text-center shadow-2xl"
+        className="relative w-full max-w-xs overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-8 text-center shadow-2xl"
       >
         {celebrate && <Confetti count={30} />}
-        <p className="text-2xl font-bold text-white">{message}</p>
+        <p className="text-2xl font-bold text-zinc-100">{message}</p>
 
         {result.leaderChanged && (
-          <p className="mt-3 text-base font-semibold text-[#6aaa64]">
+          <p className="mt-3 text-base font-semibold text-emerald-400">
             👑 {result.newLeaderName} takes the lead!
           </p>
         )}
         {!result.leaderChanged && result.closeRace && (
-          <p className="mt-3 text-base font-semibold text-[#c9b458]">
+          <p className="mt-3 text-base font-semibold text-amber-400">
             😱 It&apos;s neck and neck at the top!
           </p>
         )}

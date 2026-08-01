@@ -41,18 +41,18 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 -z-10"
           style={{
-            background: `radial-gradient(ellipse 80% 50% at 50% -10%, hsl(${hue} 70% 25% / 0.35), transparent 70%)`,
+            background: `radial-gradient(ellipse 80% 50% at 50% -10%, hsl(${hue} 70% 30% / 0.3), transparent 70%)`,
           }}
         />
         <Nav />
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
           {children}
         </main>
       </body>

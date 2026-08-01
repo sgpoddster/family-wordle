@@ -19,8 +19,7 @@ export default function CompletionRing({
           cy={36}
           r={RADIUS}
           fill="none"
-          stroke="currentColor"
-          strokeOpacity={0.15}
+          stroke="#27272a"
           strokeWidth={6}
         />
         <circle
@@ -28,7 +27,7 @@ export default function CompletionRing({
           cy={36}
           r={RADIUS}
           fill="none"
-          stroke="#6aaa64"
+          stroke="#34d399"
           strokeWidth={6}
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
@@ -40,14 +39,12 @@ export default function CompletionRing({
           x={36}
           y={41}
           textAnchor="middle"
-          className="fill-current text-sm font-bold"
+          className="fill-zinc-100 text-sm font-bold"
         >
           {completed}/{total}
         </text>
       </svg>
-      <span className="text-xs text-black/60 dark:text-white/60">
-        days everyone played
-      </span>
+      <span className="text-xs text-zinc-500">days everyone played</span>
     </div>
   );
 }
