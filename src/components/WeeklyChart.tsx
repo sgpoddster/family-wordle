@@ -46,10 +46,18 @@ function roundedTopRectPath(
   return `M${x},${y + height} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + width - r},${y} Q${x + width},${y} ${x + width},${y + r} L${x + width},${y + height} Z`;
 }
 
+// A 2 or 3 is a great score, a 6 or a real fail is a rough one -- surface
+// that at a glance with an emoji, separate from the plain number/X label.
+function barEmoji(payload: DayBar): string | null {
+  if (payload.assumed) return null;
+  if (payload.value === 6 || payload.value >= MISS_SCORE) return "😢";
+  if (payload.value === 2 || payload.value === 3) return "😊";
+  return null;
+}
+
 // `assumed` (hasn't logged yet, we're just guessing a miss because the day's
 // past) draws hollow/dashed with a "?" so it never looks like a real,
-// confirmed fail. The actual emoji/detail lives in the Tooltip now, not
-// crammed into the bar itself.
+// confirmed fail (solid bar, "X").
 function makeBarShape(color: string) {
   return function BarShape({ x, y, width, height, payload }: ShapeProps) {
     if (
@@ -72,6 +80,7 @@ function makeBarShape(color: string) {
       : payload.value >= MISS_SCORE
         ? "X"
         : payload.value;
+    const emoji = barEmoji(payload);
     return (
       <g>
         <path
@@ -92,6 +101,17 @@ function makeBarShape(color: string) {
         >
           {label}
         </text>
+        {emoji && (
+          <text
+            x={rectX + rectWidth / 2}
+            y={rectY + rectHeight / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={14}
+          >
+            {emoji}
+          </text>
+        )}
       </g>
     );
   };
@@ -110,17 +130,12 @@ function ChartTooltip({
   const day = payload[0].payload;
   if (day.blank) return null;
 
-  let detail: string;
-  let emoji: string | null = null;
-  if (day.assumed) {
-    detail = "Not logged yet";
-  } else if (day.value >= MISS_SCORE) {
-    detail = "Failed";
-    emoji = "😢";
-  } else {
-    detail = `${day.value} ${day.value === 1 ? "guess" : "guesses"}`;
-    if (day.value === 2 || day.value === 3) emoji = "😊";
-  }
+  const detail = day.assumed
+    ? "Not logged yet"
+    : day.value >= MISS_SCORE
+      ? "Failed"
+      : `${day.value} ${day.value === 1 ? "guess" : "guesses"}`;
+  const emoji = barEmoji(day);
 
   return (
     <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 text-sm shadow-xl shadow-black/40 backdrop-blur">
