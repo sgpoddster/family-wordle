@@ -269,30 +269,31 @@ export function getLastCompleteDay(
   return addDays(days[0], -1);
 }
 
-/** Live standings for the calendar week containing `today`: the chart
- * always spans the full Monday-Sunday week (expanded backward to cover any
- * backfilled score dated before that Monday), but the leaderboard total
- * only settles through the last day everyone has actually weighed in on --
- * an in-progress day where some people haven't logged yet doesn't count
- * against anyone until it's complete. */
+/** Live standings for the calendar week containing `today`: always a hard
+ * Monday-Sunday boundary, with zero carryover from the prior week -- even
+ * if a score happens to be tagged with this week's week_id (e.g. logged a
+ * day late, after the new week already rolled over), a play_date that
+ * falls outside [monday, sunday] is excluded entirely. The leaderboard
+ * total only settles through the last day everyone has actually weighed
+ * in on -- an in-progress day where some people haven't logged yet doesn't
+ * count against anyone until it's complete. */
 export function computeWeekStandings(
   players: Player[],
   scores: Score[],
   today: string
 ): { standings: ReturnType<typeof buildStandings>; completeThrough: string } {
   const { monday, sunday } = getWeekBounds(today);
-  const earliestScoreDate = scores.reduce(
-    (min, s) => (s.play_date < min ? s.play_date : min),
-    monday
+  const weekScores = scores.filter(
+    (s) => s.play_date >= monday && s.play_date <= sunday
   );
-  const displayDays = dateRange(earliestScoreDate, sunday);
+  const displayDays = dateRange(monday, sunday);
   const completeThrough = getLastCompleteDay(
     players,
-    scores,
+    weekScores,
     displayDays.filter((d) => d <= today)
   );
   return {
-    standings: buildStandings(players, scores, displayDays, completeThrough),
+    standings: buildStandings(players, weekScores, displayDays, completeThrough),
     completeThrough,
   };
 }
