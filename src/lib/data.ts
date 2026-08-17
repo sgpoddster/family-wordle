@@ -440,51 +440,72 @@ export async function getAllScores(): Promise<Score[]> {
   return data ?? [];
 }
 
-/** The single best (lowest, non-miss) score ever logged, or null if no one
- * has a real score yet. Ties go to whichever happened first. */
-export function getBestDayEver(scores: Score[]): Score | null {
-  let best: Score | null = null;
-  for (const s of scores) {
-    if (s.guesses >= MISS_SCORE) continue;
-    if (
-      !best ||
-      s.guesses < best.guesses ||
-      (s.guesses === best.guesses && s.play_date < best.play_date)
-    ) {
-      best = s;
+export type GreatDayRate = {
+  player: Player;
+  count: number;
+  total: number;
+  pct: number;
+};
+
+/** The player with the highest share of their logged days landing on a 2
+ * or 3 (a great score) -- consistency of excellence, not just whoever
+ * happens to hold a single tied-lowest day. */
+export function getBestGreatDayRate(
+  players: Player[],
+  scores: Score[]
+): GreatDayRate | null {
+  let best: GreatDayRate | null = null;
+  for (const p of players) {
+    const own = scores.filter((s) => s.player_id === p.id);
+    if (own.length === 0) continue;
+    const count = own.filter((s) => s.guesses === 2 || s.guesses === 3).length;
+    const pct = (count / own.length) * 100;
+    if (!best || pct > best.pct || (pct === best.pct && count > best.count)) {
+      best = { player: p, count, total: own.length, pct };
     }
   }
   return best;
 }
 
-export type BestWeek = { player: Player; total: number; week: Week };
+export type BestWeek = {
+  player: Player;
+  total: number;
+  weekStart: string;
+  weekEnd: string;
+};
 
 /** The lowest total any single player has ever posted across one full,
- * closed week -- the flip side of "most weeks won": not how often someone
- * wins, but the single best week anyone has ever had. Bounded by play_date
- * (not week_id) for the same reason History and endWeek() are: a week's
- * real scores can end up filed under a different week's id if "End Week"
- * lagged behind. Only counts genuine 7-day (Monday-Sunday) weeks -- a
- * shorter week (e.g. the very first one, before weeks were calendar-
- * aligned) has fewer days to accumulate points and isn't a fair comparison
- * against a full week. */
+ * completed calendar week (Monday-Sunday) -- the flip side of "most weeks
+ * won": not how often someone wins, but the single best week anyone has
+ * ever had. Deliberately calendar-based rather than driven by the `weeks`
+ * table's own start_date/end_date: an early row can have stale boundaries
+ * (e.g. the very first week's row only spans 5 of its 7 real days, from
+ * before weeks were calendar-aligned) even though the real scores for the
+ * full week exist -- comparing against real calendar weeks finds them
+ * regardless. `weekColumns` should stop before the current in-progress
+ * week (its Sunday must be in the past). */
 export function getBestWeekEver(
   players: Player[],
-  weeks: Week[],
-  allScores: Score[]
+  weekColumns: { monday: string; sunday: string }[],
+  allScores: Score[],
+  today: string
 ): BestWeek | null {
   let best: BestWeek | null = null;
-  for (const w of weeks) {
-    const endDate = w.end_date;
-    if (!endDate) continue;
-    if (dateRange(w.start_date, endDate).length !== 7) continue;
+  for (const col of weekColumns) {
+    if (col.sunday >= today) continue; // still in progress -- not a finished week yet
     const weekScores = allScores.filter(
-      (s) => s.play_date >= w.start_date && s.play_date <= endDate
+      (s) => s.play_date >= col.monday && s.play_date <= col.sunday
     );
-    const standings = computeStandings(players, weekScores, w.start_date, endDate);
+    const standings = computeStandings(players, weekScores, col.monday, col.sunday);
     for (const s of standings) {
+      if (!s.hasStarted) continue; // wasn't around/active that week
       if (!best || s.total < best.total) {
-        best = { player: s.player, total: s.total, week: w };
+        best = {
+          player: s.player,
+          total: s.total,
+          weekStart: col.monday,
+          weekEnd: col.sunday,
+        };
       }
     }
   }

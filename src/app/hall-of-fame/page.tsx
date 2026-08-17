@@ -1,13 +1,17 @@
 import Avatar from "@/components/Avatar";
-import CalendarHeatmap from "@/components/CalendarHeatmap";
+import PerformanceOverTime from "@/components/PerformanceOverTime";
 import { STATS_START_DATE } from "@/lib/constants";
 import {
+  addDays,
+  computeStandings,
   getActivePlayers,
   getAllScores,
-  getBestDayEver,
+  getBestGreatDayRate,
   getBestWeekEver,
   getClosedWeeks,
+  getWeekBounds,
   longestStreakEver,
+  todayStr,
   type Player,
 } from "@/lib/data";
 
@@ -65,6 +69,15 @@ function RecordCard({
   );
 }
 
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-zinc-800/50 px-2.5 py-1.5 text-center">
+      <p className="text-sm font-bold text-zinc-100">{value}</p>
+      <p className="text-[10px] text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
 export default async function HallOfFamePage() {
   const [players, allScores, allWeeks] = await Promise.all([
     getActivePlayers(),
@@ -78,8 +91,26 @@ export default async function HallOfFamePage() {
   const scores = allScores.filter((s) => s.play_date >= STATS_START_DATE);
   const weeks = allWeeks.filter((w) => w.start_date >= STATS_START_DATE);
 
-  const bestDay = getBestDayEver(scores);
-  const bestWeek = getBestWeekEver(players, weeks, scores);
+  // Real calendar weeks (Monday-Sunday) spanning from wherever the data
+  // actually starts through today -- used for every "per week" stat below
+  // instead of the `weeks` table's own row boundaries, which can be stale
+  // (e.g. the very first row only spans 5 of its 7 real days, from before
+  // weeks were calendar-aligned).
+  const today = todayStr();
+  const { monday: todayMonday } = getWeekBounds(today);
+  const earliestScoreDate = scores.reduce(
+    (min, s) => (s.play_date < min ? s.play_date : min),
+    today
+  );
+  const dataStartMonday = getWeekBounds(earliestScoreDate).monday;
+  const weekColumns: { monday: string; sunday: string }[] = [];
+  for (let m = dataStartMonday; m <= todayMonday; m = addDays(m, 7)) {
+    weekColumns.push({ monday: m, sunday: addDays(m, 6) });
+  }
+  const completedWeekColumns = weekColumns.filter((c) => c.sunday < today);
+
+  const greatDayRate = getBestGreatDayRate(players, scores);
+  const bestWeek = getBestWeekEver(players, weekColumns, scores, today);
 
   const streaks = players
     .map((p) => ({ player: p, streak: longestStreakEver(scores, p.id) }))
@@ -110,6 +141,50 @@ export default async function HallOfFamePage() {
   const topComeback = topEntry(comebacks);
   const topConsistent = topEntry(consistents);
 
+  // Per-player summary: counts of 2s/3s, average weekly total (completed
+  // calendar weeks only), average daily score (fails included, same as
+  // everywhere else "a miss counts as 8").
+  const playerSummaries = players.map((p) => {
+    const own = scores.filter((s) => s.player_id === p.id);
+    const twos = own.filter((s) => s.guesses === 2).length;
+    const threes = own.filter((s) => s.guesses === 3).length;
+    const avgDaily = own.length
+      ? own.reduce((sum, s) => sum + s.guesses, 0) / own.length
+      : null;
+    const weeklyTotalsForPlayer = completedWeekColumns
+      .map((col) => {
+        const weekScores = own.filter(
+          (s) => s.play_date >= col.monday && s.play_date <= col.sunday
+        );
+        const standings = computeStandings([p], weekScores, col.monday, col.sunday);
+        return standings[0]?.hasStarted ? standings[0].total : undefined;
+      })
+      .filter((t): t is number => t !== undefined);
+    const avgWeekly = weeklyTotalsForPlayer.length
+      ? weeklyTotalsForPlayer.reduce((a, b) => a + b, 0) /
+        weeklyTotalsForPlayer.length
+      : null;
+    return { player: p, twos, threes, avgDaily, avgWeekly };
+  });
+
+  // "Performance over time" grid: trimmed to start where real data begins
+  // (not a fixed lookback that pads out with empty weeks), capped at a
+  // 12-week visible viewport with the rest reachable by scrolling back.
+  const weeklyTotals: Record<string, (number | null)[]> = {};
+  for (const p of players) {
+    weeklyTotals[p.id] = weekColumns.map((col) => {
+      const through = today < col.sunday ? today : col.sunday;
+      const weekScores = scores.filter(
+        (s) =>
+          s.player_id === p.id &&
+          s.play_date >= col.monday &&
+          s.play_date <= through
+      );
+      const standings = computeStandings([p], weekScores, col.monday, through);
+      return standings[0]?.hasStarted ? standings[0].total : null;
+    });
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -124,9 +199,13 @@ export default async function HallOfFamePage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <RecordCard
           icon="⭐"
-          label="Best day ever"
-          player={bestDay ? byId(bestDay.player_id) : undefined}
-          detail={bestDay ? `${bestDay.guesses} guesses` : "—"}
+          label="Most 2s & 3s"
+          player={greatDayRate?.player}
+          detail={
+            greatDayRate
+              ? `${greatDayRate.pct.toFixed(0)}% (${greatDayRate.count}/${greatDayRate.total})`
+              : "—"
+          }
         />
         <RecordCard
           icon="🥶"
@@ -135,7 +214,7 @@ export default async function HallOfFamePage() {
           detail={bestWeek ? `${bestWeek.total} pts · ${(bestWeek.total / 7).toFixed(2)} avg` : "—"}
           subDetail={
             bestWeek
-              ? `${formatDate(bestWeek.week.start_date)} – ${formatDate(bestWeek.week.end_date!)}`
+              ? `${formatDate(bestWeek.weekStart)} – ${formatDate(bestWeek.weekEnd)}`
               : undefined
           }
         />
@@ -166,14 +245,49 @@ export default async function HallOfFamePage() {
       </div>
 
       {players.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold text-zinc-100">
-            Performance over time
-          </h2>
-          <div className="space-y-2 overflow-x-auto pb-2">
-            {players.map((p) => (
-              <CalendarHeatmap key={p.id} player={p} scores={scores} />
-            ))}
+        <div className="space-y-6">
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-zinc-100">
+              Player breakdown
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {playerSummaries.map(({ player, twos, threes, avgDaily, avgWeekly }) => (
+                <div
+                  key={player.id}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3"
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <Avatar name={player.name} avatarUrl={player.avatar_url} size={24} />
+                    <span className="font-semibold text-zinc-100">{player.name}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <StatChip label="2s" value={String(twos)} />
+                    <StatChip label="3s" value={String(threes)} />
+                    <StatChip
+                      label="wk avg"
+                      value={avgWeekly !== null ? avgWeekly.toFixed(1) : "—"}
+                    />
+                    <StatChip
+                      label="day avg"
+                      value={avgDaily !== null ? avgDaily.toFixed(1) : "—"}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-zinc-100">
+              Performance over time
+            </h2>
+            <PerformanceOverTime
+              players={players}
+              scores={scores}
+              weekColumns={weekColumns}
+              weeklyTotals={weeklyTotals}
+              today={today}
+            />
           </div>
         </div>
       )}
