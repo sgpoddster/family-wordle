@@ -1,5 +1,10 @@
 export const MISS_SCORE = 8;
 
+/** All-time records (Hall of Fame) only count from this date onward --
+ * excludes early setup/test data from before the app was actually in
+ * real use. */
+export const STATS_START_DATE = "2026-07-27";
+
 // Tailwind's "-400" shades -- muted enough to sit comfortably on a zinc-950
 // background without turning into a wall of pure neon, but still distinct
 // and readable at a glance.

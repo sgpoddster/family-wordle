@@ -1,5 +1,6 @@
 import Avatar from "@/components/Avatar";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
+import { STATS_START_DATE } from "@/lib/constants";
 import {
   getActivePlayers,
   getAllScores,
@@ -65,12 +66,17 @@ function RecordCard({
 }
 
 export default async function HallOfFamePage() {
-  const [players, scores, weeks] = await Promise.all([
+  const [players, allScores, allWeeks] = await Promise.all([
     getActivePlayers(),
     getAllScores(),
     getClosedWeeks(),
   ]);
   const byId = (id: string | null) => players.find((p) => p.id === id);
+
+  // All-time records only count from STATS_START_DATE onward -- excludes
+  // early setup/test data from before the app was actually in real use.
+  const scores = allScores.filter((s) => s.play_date >= STATS_START_DATE);
+  const weeks = allWeeks.filter((w) => w.start_date >= STATS_START_DATE);
 
   const bestDay = getBestDayEver(scores);
   const bestWeek = getBestWeekEver(players, weeks, scores);
