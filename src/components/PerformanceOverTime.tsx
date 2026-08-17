@@ -7,7 +7,10 @@ import type { Player, Score } from "@/lib/data";
 
 const VISIBLE_WEEKS = 12;
 const NAME_COL_WIDTH = 104;
-const WEEK_COL_WIDTH = 56;
+// 7 cells * 12px + 6 gaps * 2px = 96px of actual content -- the column
+// needs to be at least that wide plus a little breathing room, or each
+// week's cells overflow into the next column.
+const WEEK_COL_WIDTH = 108;
 
 type WeekColumn = { monday: string; sunday: string };
 
@@ -26,9 +29,9 @@ function formatDate(dateStr: string): string {
 
 function cellColor(guesses: number | undefined): string {
   if (guesses === undefined) return "rgba(127,127,127,0.12)";
-  if (guesses >= MISS_SCORE) return "#8b3a3a";
+  if (guesses >= MISS_SCORE) return "#e5484d";
   const hue = 120 - (guesses - 1) * 22;
-  return `hsl(${hue}, 55%, 38%)`;
+  return `hsl(${hue}, 70%, 52%)`;
 }
 
 export default function PerformanceOverTime({
@@ -107,7 +110,7 @@ export default function PerformanceOverTime({
               return (
                 <div
                   key={col.monday}
-                  className="flex shrink-0 flex-col items-center gap-0.5 border-l border-zinc-800/60 py-1"
+                  className="flex shrink-0 flex-col items-center gap-2 border-l border-zinc-800/60 py-1"
                   style={{ width: WEEK_COL_WIDTH }}
                 >
                   <div className="flex gap-[2px]">
@@ -126,7 +129,9 @@ export default function PerformanceOverTime({
                       );
                     })}
                   </div>
-                  <span className="text-[10px] text-zinc-600">{total ?? ""}</span>
+                  <span className="text-xs font-semibold text-zinc-400">
+                    {total ?? ""}
+                  </span>
                 </div>
               );
             })}
