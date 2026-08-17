@@ -2,21 +2,69 @@
 
 import { useEffect, useState } from "react";
 import Confetti from "@/components/Confetti";
-import { MISS_SCORE } from "@/lib/constants";
 import type { SubmitScoreResult } from "@/app/actions";
 
-const GREAT = ["🤯 Genius!", "🔥 Incredible!", "⭐ Nailed it!", "🎯 Bullseye!"];
-const GOOD = ["😎 Nice one!", "👍 Solid guess!", "✅ Well played!"];
-const CLOSE = ["😅 Cutting it close!", "😬 Phew, made it!", "🙈 Just in time!"];
+const ONE = [
+  "🤯 SENSATIONAL. One guess?!",
+  "🐐 Absolute unit. First try.",
+  "🔮 Are you psychic?",
+  "🚀 Straight to orbit. One guess.",
+  "👑 Bow down. One-guess royalty.",
+];
+const TWO = [
+  "🔥 Woah. Amazing.",
+  "😲 Two guesses?! Show off.",
+  "⚡ Lightning fast.",
+  "🎯 Ridiculously good.",
+  "🧠 Big brain energy.",
+];
+const THREE = [
+  "💪 Very good!",
+  "✅ Clean and efficient.",
+  "👏 Nicely done.",
+  "🌟 Very solid work.",
+  "😌 Textbook.",
+];
+const FOUR = [
+  "🙂 Solid. Very average, very fine.",
+  "👍 Gets the job done.",
+  "😐 Perfectly respectable.",
+  "📈 Right down the middle.",
+  "🤷 It'll do.",
+];
+const FIVE = [
+  "😬 Eh, scraped through.",
+  "😅 Cutting it close there.",
+  "🫠 Meh. It counts though.",
+  "😩 Rough patch, but you made it.",
+  "🥴 Barely.",
+];
+const SIX = [
+  "😰 Yikes, right at the wire.",
+  "🙃 That was NOT pretty.",
+  "😵‍💫 Squeaked by on the last guess.",
+  "🫣 Painful to watch, but a win's a win.",
+  "😮‍💨 Phew. Barely made it out alive.",
+];
 const FAIL = [
-  "😩 Rough one!",
-  "💀 Ouch, better luck tomorrow!",
-  "🫠 Not your day!",
+  "💀 Disastrous.",
+  "🫠 Total wipeout.",
+  "🙈 Couldn't even look.",
+  "☠️ Catastrophic. Try again tomorrow.",
+  "😭 Rock bottom. There's always tomorrow.",
 ];
 
+const POOLS: Record<number, string[]> = {
+  1: ONE,
+  2: TWO,
+  3: THREE,
+  4: FOUR,
+  5: FIVE,
+  6: SIX,
+};
+
 function pickMessage(guesses: number): string {
-  const pool =
-    guesses <= 2 ? GREAT : guesses <= 4 ? GOOD : guesses < MISS_SCORE ? CLOSE : FAIL;
+  const pool = POOLS[guesses] ?? FAIL;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -47,17 +95,6 @@ export default function ReactionPopup({
       >
         {celebrate && <Confetti count={30} />}
         <p className="text-2xl font-bold text-zinc-100">{message}</p>
-
-        {result.leaderChanged && (
-          <p className="mt-3 text-base font-semibold text-emerald-400">
-            👑 {result.newLeaderName} takes the lead!
-          </p>
-        )}
-        {!result.leaderChanged && result.closeRace && (
-          <p className="mt-3 text-base font-semibold text-amber-400">
-            😱 It&apos;s neck and neck at the top!
-          </p>
-        )}
       </div>
     </div>
   );

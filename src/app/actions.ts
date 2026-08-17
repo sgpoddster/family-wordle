@@ -7,11 +7,9 @@ import {
   addDays,
   computeStandings,
   computeWeekAwards,
-  computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
   getAllScores,
-  getScoresForWeek,
   getWeekBounds,
   getWeekById,
   todayStr,
@@ -19,9 +17,6 @@ import {
 
 export type SubmitScoreResult = {
   guesses: number;
-  leaderChanged: boolean;
-  newLeaderName: string | null;
-  closeRace: boolean;
 };
 
 export async function submitScore(
@@ -41,16 +36,6 @@ export async function submitScore(
   }
 
   const week = await getActiveWeek();
-  const today = todayStr();
-  const players = await getActivePlayers();
-  // "Takes the lead" / "neck and neck" commentary is about THIS week's live
-  // race -- meaningless (and actively misleading) for a backdated entry, so
-  // it's only computed for a same-day submission.
-  const isToday = playDate === today;
-  const before = isToday
-    ? computeWeekStandings(players, await getScoresForWeek(week.id), today)
-        .standings
-    : [];
 
   const { error } = await supabase.from("scores").upsert(
     {
@@ -66,29 +51,7 @@ export async function submitScore(
   revalidatePath("/");
   revalidatePath("/dashboard");
 
-  if (!isToday) {
-    return { guesses, leaderChanged: false, newLeaderName: null, closeRace: false };
-  }
-
-  const after = computeWeekStandings(
-    players,
-    await getScoresForWeek(week.id),
-    today
-  ).standings;
-  const beforeLeaderId = before[0]?.player.id ?? null;
-  const afterLeaderId = after[0]?.player.id ?? null;
-  const leaderChanged =
-    afterLeaderId === playerId && beforeLeaderId !== afterLeaderId;
-  const margin = after.length >= 2 ? after[1].total - after[0].total : null;
-
-  return {
-    guesses,
-    leaderChanged,
-    newLeaderName: leaderChanged
-      ? players.find((p) => p.id === afterLeaderId)?.name ?? null
-      : null,
-    closeRace: margin !== null && margin <= 1,
-  };
+  return { guesses };
 }
 
 export async function addPlayer(formData: FormData) {
