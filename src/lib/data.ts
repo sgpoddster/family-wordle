@@ -464,7 +464,10 @@ export type BestWeek = { player: Player; total: number; week: Week };
  * wins, but the single best week anyone has ever had. Bounded by play_date
  * (not week_id) for the same reason History and endWeek() are: a week's
  * real scores can end up filed under a different week's id if "End Week"
- * lagged behind. */
+ * lagged behind. Only counts genuine 7-day (Monday-Sunday) weeks -- a
+ * shorter week (e.g. the very first one, before weeks were calendar-
+ * aligned) has fewer days to accumulate points and isn't a fair comparison
+ * against a full week. */
 export function getBestWeekEver(
   players: Player[],
   weeks: Week[],
@@ -474,6 +477,7 @@ export function getBestWeekEver(
   for (const w of weeks) {
     const endDate = w.end_date;
     if (!endDate) continue;
+    if (dateRange(w.start_date, endDate).length !== 7) continue;
     const weekScores = allScores.filter(
       (s) => s.play_date >= w.start_date && s.play_date <= endDate
     );
