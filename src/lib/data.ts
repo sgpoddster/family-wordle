@@ -457,6 +457,36 @@ export function getBestDayEver(scores: Score[]): Score | null {
   return best;
 }
 
+export type BestWeek = { player: Player; total: number; week: Week };
+
+/** The lowest total any single player has ever posted across one full,
+ * closed week -- the flip side of "most weeks won": not how often someone
+ * wins, but the single best week anyone has ever had. Bounded by play_date
+ * (not week_id) for the same reason History and endWeek() are: a week's
+ * real scores can end up filed under a different week's id if "End Week"
+ * lagged behind. */
+export function getBestWeekEver(
+  players: Player[],
+  weeks: Week[],
+  allScores: Score[]
+): BestWeek | null {
+  let best: BestWeek | null = null;
+  for (const w of weeks) {
+    const endDate = w.end_date;
+    if (!endDate) continue;
+    const weekScores = allScores.filter(
+      (s) => s.play_date >= w.start_date && s.play_date <= endDate
+    );
+    const standings = computeStandings(players, weekScores, w.start_date, endDate);
+    for (const s of standings) {
+      if (!best || s.total < best.total) {
+        best = { player: s.player, total: s.total, week: w };
+      }
+    }
+  }
+  return best;
+}
+
 /** The longest-ever run of consecutive calendar days a player has logged
  * something (score or fail), anywhere in their history -- not just the
  * streak currently running. */

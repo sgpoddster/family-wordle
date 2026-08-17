@@ -4,6 +4,7 @@ import {
   getActivePlayers,
   getAllScores,
   getBestDayEver,
+  getBestWeekEver,
   getClosedWeeks,
   longestStreakEver,
   type Player,
@@ -19,36 +20,46 @@ function topEntry(counts: Map<string, number>): [string, number] | null {
   return top;
 }
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function RecordCard({
   icon,
   label,
   player,
   detail,
+  subDetail,
 }: {
   icon: string;
   label: string;
   player: Player | undefined;
   detail: string;
+  subDetail?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-black/10 dark:border-white/10 px-4 py-3">
+    <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
       <span className="text-2xl">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-black/50 dark:text-white/50">{label}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-zinc-500">{label}</p>
         {player ? (
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="mt-0.5 flex items-center gap-2">
             <Avatar name={player.name} avatarUrl={player.avatar_url} size={24} />
-            <span className="font-semibold truncate">{player.name}</span>
+            <span className="truncate font-semibold text-zinc-100">
+              {player.name}
+            </span>
           </div>
         ) : (
-          <p className="font-semibold text-black/40 dark:text-white/40">
-            Nobody yet
-          </p>
+          <p className="font-semibold text-zinc-600">Nobody yet</p>
         )}
       </div>
-      <span className="text-sm text-black/60 dark:text-white/60 shrink-0">
-        {detail}
-      </span>
+      <div className="shrink-0 text-right">
+        <span className="text-sm text-zinc-400">{detail}</span>
+        {subDetail && <p className="text-xs text-zinc-600">{subDetail}</p>}
+      </div>
     </div>
   );
 }
@@ -62,6 +73,7 @@ export default async function HallOfFamePage() {
   const byId = (id: string | null) => players.find((p) => p.id === id);
 
   const bestDay = getBestDayEver(scores);
+  const bestWeek = getBestWeekEver(players, weeks, scores);
 
   const streaks = players
     .map((p) => ({ player: p, streak: longestStreakEver(scores, p.id) }))
@@ -95,8 +107,10 @@ export default async function HallOfFamePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Hall of Fame</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+          Hall of Fame
+        </h1>
+        <p className="text-sm text-zinc-400">
           All-time records &mdash; these never reset.
         </p>
       </div>
@@ -107,6 +121,17 @@ export default async function HallOfFamePage() {
           label="Best day ever"
           player={bestDay ? byId(bestDay.player_id) : undefined}
           detail={bestDay ? `${bestDay.guesses} guesses` : "—"}
+        />
+        <RecordCard
+          icon="🥶"
+          label="Lowest weekly score"
+          player={bestWeek?.player}
+          detail={bestWeek ? `${bestWeek.total} pts · ${(bestWeek.total / 7).toFixed(2)} avg` : "—"}
+          subDetail={
+            bestWeek
+              ? `${formatDate(bestWeek.week.start_date)} – ${formatDate(bestWeek.week.end_date!)}`
+              : undefined
+          }
         />
         <RecordCard
           icon="🔥"
@@ -136,7 +161,9 @@ export default async function HallOfFamePage() {
 
       {players.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Performance over time</h2>
+          <h2 className="mb-3 text-lg font-semibold text-zinc-100">
+            Performance over time
+          </h2>
           <div className="space-y-2 overflow-x-auto pb-2">
             {players.map((p) => (
               <CalendarHeatmap key={p.id} player={p} scores={scores} />
