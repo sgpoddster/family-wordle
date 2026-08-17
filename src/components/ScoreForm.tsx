@@ -13,9 +13,13 @@ const GUESS_OPTIONS = [1, 2, 3, 4, 5, 6];
 export default function ScoreForm({
   players,
   today,
+  days,
 }: {
   players: Player[];
   today: string;
+  /** Explicit quick-pick dates (e.g. a specific week's Mon-Sun), passed
+   * through to DateField. Defaults to the usual today/yesterday/-2/-3 set. */
+  days?: string[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -81,7 +85,7 @@ export default function ScoreForm({
         </div>
       </fieldset>
 
-      <DateField today={today} />
+      <DateField today={today} days={days} />
 
       <fieldset>
         <legend className="mb-2 block text-sm font-medium text-zinc-300">

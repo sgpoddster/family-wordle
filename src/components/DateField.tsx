@@ -16,9 +16,20 @@ function label(dateStr: string, today: string): string {
   });
 }
 
-export default function DateField({ today }: { today: string }) {
-  const quickDates = [0, -1, -2, -3].map((offset) => addDays(today, offset));
-  const [selected, setSelected] = useState(today);
+export default function DateField({
+  today,
+  days,
+}: {
+  today: string;
+  /** Explicit list of quick-pick dates, e.g. a specific week's Mon-Sun.
+   * Defaults to the usual "today, yesterday, and the 2 days before" set. */
+  days?: string[];
+}) {
+  const quickDates = days ?? [0, -1, -2, -3].map((offset) => addDays(today, offset));
+  const defaultSelected = quickDates.includes(today)
+    ? today
+    : (quickDates[quickDates.length - 1] ?? today);
+  const [selected, setSelected] = useState(defaultSelected);
   const [showCustom, setShowCustom] = useState(false);
 
   return (

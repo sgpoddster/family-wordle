@@ -10,8 +10,10 @@ import {
   computeWeekStandings,
   getActivePlayers,
   getActiveWeek,
+  getAllScores,
   getScoresForWeek,
   getWeekBounds,
+  getWeekById,
   todayStr,
 } from "@/lib/data";
 
@@ -41,11 +43,14 @@ export async function submitScore(
   const week = await getActiveWeek();
   const today = todayStr();
   const players = await getActivePlayers();
-  const before = computeWeekStandings(
-    players,
-    await getScoresForWeek(week.id),
-    today
-  ).standings;
+  // "Takes the lead" / "neck and neck" commentary is about THIS week's live
+  // race -- meaningless (and actively misleading) for a backdated entry, so
+  // it's only computed for a same-day submission.
+  const isToday = playDate === today;
+  const before = isToday
+    ? computeWeekStandings(players, await getScoresForWeek(week.id), today)
+        .standings
+    : [];
 
   const { error } = await supabase.from("scores").upsert(
     {
@@ -60,6 +65,10 @@ export async function submitScore(
 
   revalidatePath("/");
   revalidatePath("/dashboard");
+
+  if (!isToday) {
+    return { guesses, leaderChanged: false, newLeaderName: null, closeRace: false };
+  }
 
   const after = computeWeekStandings(
     players,
@@ -148,19 +157,40 @@ export async function setPlayerActive(playerId: string, active: boolean) {
   revalidatePath("/dashboard");
 }
 
-export async function endWeek() {
-  const week = await getActiveWeek();
+/**
+ * End (or re-finalize) a week. With no weekId, targets whichever week is
+ * currently open -- the normal "End Week" flow: closes it and creates the
+ * next one starting the following Monday.
+ *
+ * With an explicit weekId pointing at an ALREADY-closed week (e.g. new
+ * scores were added for a past week after it was first ended), this
+ * recomputes and updates its winner/awards in place -- end_date doesn't
+ * move and no new week gets created, so re-finalizing never produces a
+ * duplicate/phantom week row.
+ */
+export async function endWeek(weekId?: string) {
+  const week = weekId ? await getWeekById(weekId) : await getActiveWeek();
   const players = await getActivePlayers();
-  const scores = await getScoresForWeek(week.id);
   const today = todayStr();
+  const wasOpen = !week.end_date;
 
   // Weeks are always calendar Monday-Sunday -- finalize through that week's
-  // own Sunday (or today, if ending it early mid-week), never past it. If
-  // this week went unclosed for a while, `today` could already be deep into
-  // a later calendar week; without this bound the tally would wrongly pull
-  // in any days beyond the week actually being closed.
+  // own Sunday (or today, if ending it early mid-week; or its existing
+  // end_date, if it was already closed), never past it. If this week went
+  // unclosed for a while, `today` could already be deep into a later
+  // calendar week; without this bound the tally would wrongly pull in any
+  // days beyond the week actually being closed.
   const { sunday } = getWeekBounds(week.start_date);
-  const through = today < sunday ? today : sunday;
+  const through = week.end_date ?? (today < sunday ? today : sunday);
+
+  // Bound by play_date, not week_id: a score is tagged with whichever week
+  // was open at submission time, which can lag behind its actual date if
+  // "End Week" wasn't clicked promptly -- this week's real scores can end
+  // up filed under an earlier week's id.
+  const allScores = await getAllScores();
+  const scores = allScores.filter(
+    (s) => s.play_date >= week.start_date && s.play_date <= through
+  );
 
   const standings = computeStandings(players, scores, week.start_date, through);
   const winnerId = standings[0]?.player.id ?? null;
@@ -179,12 +209,14 @@ export async function endWeek() {
     .eq("id", week.id);
   if (closeError) throw closeError;
 
-  // Next week always starts the Monday right after this one -- keeps the
-  // weeks table calendar-aligned even if this one was closed out late.
-  const { error: createError } = await supabase.from("weeks").insert({
-    start_date: addDays(sunday, 1),
-  });
-  if (createError) throw createError;
+  if (wasOpen) {
+    // Next week always starts the Monday right after this one -- keeps the
+    // weeks table calendar-aligned even if this one was closed out late.
+    const { error: createError } = await supabase.from("weeks").insert({
+      start_date: addDays(sunday, 1),
+    });
+    if (createError) throw createError;
+  }
 
   revalidatePath("/");
   revalidatePath("/dashboard");

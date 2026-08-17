@@ -108,6 +108,30 @@ export async function getActiveWeek(): Promise<Week> {
   return created;
 }
 
+export async function getWeekById(weekId: string): Promise<Week> {
+  const { data, error } = await supabase
+    .from("weeks")
+    .select("*")
+    .eq("id", weekId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** The weeks-table row whose start_date is exactly this Monday, if one has
+ * ever been created for that week (open or already closed). Null if that
+ * week has no row yet (e.g. it's in the future, or was skipped entirely
+ * with zero activity). */
+export async function getWeekStartingOn(monday: string): Promise<Week | null> {
+  const { data, error } = await supabase
+    .from("weeks")
+    .select("*")
+    .eq("start_date", monday)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function getScoresForWeek(weekId: string): Promise<Score[]> {
   const { data, error } = await supabase
     .from("scores")

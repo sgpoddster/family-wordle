@@ -10,8 +10,12 @@ type Standing = { player: Player; total: number };
 
 export default function EndWeekButton({
   standings,
+  weekId,
+  isClosed,
 }: {
   standings: Standing[];
+  weekId?: string;
+  isClosed?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [phase, setPhase] = useState<"idle" | "drumroll" | "reveal" | "error">(
@@ -23,7 +27,7 @@ export default function EndWeekButton({
     setConfirming(false);
     setPhase("drumroll");
     const [outcome] = await Promise.all([
-      endWeek().then(
+      endWeek(weekId).then(
         () => "reveal" as const,
         () => "error" as const
       ),
@@ -46,7 +50,10 @@ export default function EndWeekButton({
                 😬 Something went wrong
               </p>
               <p className="mt-2 text-sm text-zinc-400">
-                The week wasn&apos;t ended &mdash; please try again.
+                {isClosed
+                  ? "The week couldn&apos;t be recalculated"
+                  : "The week wasn&apos;t ended"}{" "}
+                &mdash; please try again.
               </p>
               <button
                 onClick={() => setPhase("idle")}
@@ -65,7 +72,7 @@ export default function EndWeekButton({
                 >
                   <Avatar name={winner.name} avatarUrl={winner.avatar_url} size={72} />
                   <p className="text-2xl font-bold text-zinc-100">
-                    🏆 {winner.name} wins the week!
+                    🏆 {winner.name} {isClosed ? "wins!" : "wins the week!"}
                   </p>
                 </div>
               )}
@@ -88,19 +95,23 @@ export default function EndWeekButton({
         onClick={() => setConfirming(true)}
         className="rounded-full border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900"
       >
-        End Week
+        {isClosed ? "Recalculate winner" : "End Week"}
       </button>
     );
   }
 
   return (
     <div className="flex items-center gap-2 text-sm text-zinc-300">
-      <span>Lock in the winner and start a new week?</span>
+      <span>
+        {isClosed
+          ? "Redo the winner and awards with the latest scores?"
+          : "Lock in the winner and start a new week?"}
+      </span>
       <button
         onClick={start}
         className="rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 px-3 py-1.5 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
       >
-        Yes, end it
+        {isClosed ? "Yes, recalculate" : "Yes, end it"}
       </button>
       <button
         onClick={() => setConfirming(false)}

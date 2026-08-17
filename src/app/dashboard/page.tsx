@@ -1,15 +1,18 @@
 import Link from "next/link";
 import EndWeekButton from "@/components/EndWeekButton";
+import ScoreForm from "@/components/ScoreForm";
 import WeekStats from "@/components/WeekStats";
 import {
   addDays,
   computeStandings,
   computeStreaks,
   computeWeekStandings,
+  dateRange,
   getActivePlayers,
   getActiveWeek,
   getRecentScores,
   getWeekBounds,
+  getWeekStartingOn,
   todayStr,
 } from "@/lib/data";
 
@@ -38,9 +41,13 @@ export default async function DashboardPage({
   }
   const isCurrentWeek = monday === todayMonday;
 
-  const [players, openWeek, recentScores] = await Promise.all([
+  const [players, openWeek, viewedWeekRow, recentScores] = await Promise.all([
     getActivePlayers(),
     getActiveWeek(),
+    // The weeks-table row for the week actually being viewed, if one
+    // exists yet -- separate from `openWeek` (whichever week is currently
+    // open), since you can browse back to an already-closed week too.
+    getWeekStartingOn(monday),
     // From this viewed week's Monday onward covers any week being browsed,
     // however far back -- one lean, targeted fetch instead of a fixed window.
     getRecentScores(monday),
@@ -59,11 +66,15 @@ export default async function DashboardPage({
     s.daily.some((d) => d.guesses !== null)
   );
 
-  // The open (unclosed) week row can be from an earlier calendar week than
-  // whatever's being viewed here, or than today -- either way, show the End
-  // Week button only when the viewed week IS the one that's actually open.
+  // Whether a weeks-table row exists for the week being viewed -- it might
+  // not (e.g. a week with zero activity that was skipped entirely). If it
+  // does, it's either still open (normal "End Week") or already closed
+  // (offer "Recalculate" instead, e.g. scores were added after the fact).
+  const viewedWeekIsClosed = viewedWeekRow?.end_date != null;
+
+  // The currently-open week row can itself be from an earlier calendar week
+  // than today -- surface a nudge to go finish it, distinct from browsing.
   const openWeekBounds = getWeekBounds(openWeek.start_date);
-  const isOpenWeek = openWeekBounds.monday === monday;
   const openWeekIsStale = openWeekBounds.monday !== todayMonday;
 
   const streakScores = await getRecentScores(addDays(today, -60));
@@ -125,8 +136,12 @@ export default async function DashboardPage({
               This week
             </Link>
           )}
-          {isOpenWeek && players.length > 0 && (
-            <EndWeekButton standings={standings} />
+          {viewedWeekRow && players.length > 0 && (
+            <EndWeekButton
+              standings={standings}
+              weekId={viewedWeekRow.id}
+              isClosed={viewedWeekIsClosed}
+            />
           )}
         </div>
       </div>
@@ -136,13 +151,34 @@ export default async function DashboardPage({
           Add family members on the Players page to start tracking.
         </p>
       ) : (
-        <WeekStats
-          standings={standings}
-          hasScores={hasScores}
-          today={today}
-          streaks={streaks}
-          completeThrough={completeThrough}
-        />
+        <>
+          <WeekStats
+            standings={standings}
+            hasScores={hasScores}
+            today={today}
+            streaks={streaks}
+            completeThrough={completeThrough}
+          />
+
+          {!isCurrentWeek && (
+            <div className="space-y-4 border-t border-zinc-800 pt-8">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100">
+                  Log a score for this week
+                </h2>
+                <p className="text-sm text-zinc-400">
+                  Add or fix an entry for {formatDate(monday)} –{" "}
+                  {formatDate(sunday)}.
+                </p>
+              </div>
+              <ScoreForm
+                players={players}
+                today={today}
+                days={dateRange(monday, sunday)}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
