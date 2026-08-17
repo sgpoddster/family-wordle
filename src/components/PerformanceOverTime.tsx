@@ -6,7 +6,7 @@ import { MISS_SCORE, colorForKey, hasJoinedBy } from "@/lib/constants";
 import type { Player, Score } from "@/lib/data";
 
 const VISIBLE_WEEKS = 12;
-const NAME_COL_WIDTH = 84;
+const NAME_COL_WIDTH = 104;
 const WEEK_COL_WIDTH = 56;
 
 type WeekColumn = { monday: string; sunday: string };
@@ -79,7 +79,7 @@ export default function PerformanceOverTime({
         {weekColumns.map((col) => (
           <div
             key={col.monday}
-            className="shrink-0 text-center text-[10px] text-zinc-500"
+            className="shrink-0 border-l border-zinc-800/60 text-center text-[10px] text-zinc-500"
             style={{ width: WEEK_COL_WIDTH }}
           >
             {formatDate(col.monday)}
@@ -93,11 +93,11 @@ export default function PerformanceOverTime({
         return (
           <div key={p.id} className="flex items-center">
             <div
-              className="sticky left-0 z-10 flex shrink-0 items-center gap-1.5 bg-zinc-950 pr-2"
+              className="sticky left-0 z-10 flex shrink-0 items-center gap-1.5 overflow-hidden bg-zinc-950 pr-2"
               style={{ width: NAME_COL_WIDTH }}
             >
               <Avatar name={p.name} avatarUrl={p.avatar_url} size={20} color={color} />
-              <span className="truncate text-xs font-medium text-zinc-300">
+              <span className="min-w-0 truncate text-xs font-medium text-zinc-300">
                 {p.name}
               </span>
             </div>
@@ -107,7 +107,7 @@ export default function PerformanceOverTime({
               return (
                 <div
                   key={col.monday}
-                  className="flex shrink-0 flex-col items-center gap-0.5 py-1"
+                  className="flex shrink-0 flex-col items-center gap-0.5 border-l border-zinc-800/60 py-1"
                   style={{ width: WEEK_COL_WIDTH }}
                 >
                   <div className="flex gap-[2px]">
