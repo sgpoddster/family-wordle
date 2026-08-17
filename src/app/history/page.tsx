@@ -1,11 +1,11 @@
 import Avatar from "@/components/Avatar";
 import ShareWeekButton from "@/components/ShareWeekButton";
+import { colorForKey, MISS_SCORE } from "@/lib/constants";
 import {
-  MISS_SCORE,
   computeStandings,
   getAllPlayers,
+  getAllScores,
   getClosedWeeks,
-  getScoresForWeek,
 } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -37,38 +37,52 @@ function buildShareText(
 }
 
 export default async function HistoryPage() {
-  const [weeks, players] = await Promise.all([getClosedWeeks(), getAllPlayers()]);
+  const [weeks, players, allScores] = await Promise.all([
+    getClosedWeeks(),
+    getAllPlayers(),
+    getAllScores(),
+  ]);
 
-  const weeksWithShare = await Promise.all(
-    weeks.map(async (w) => {
-      if (!w.end_date) return { week: w, shareText: null };
-      const scores = await getScoresForWeek(w.id);
-      const standings = computeStandings(players, scores, w.start_date, w.end_date);
-      return { week: w, shareText: buildShareText(w, standings) };
-    })
-  );
+  // Bound by play_date, not week_id: a score is tagged with whichever week
+  // was active at submission time, which can lag behind its actual date if
+  // "End Week" wasn't clicked promptly -- a week's own real scores can end
+  // up filed under an earlier week's id. Date-range filtering finds them
+  // regardless of which id they're stuck under.
+  const weeksWithStats = weeks.map((w) => {
+    const endDate = w.end_date;
+    if (!endDate) return { week: w, standings: null, shareText: null };
+    const scores = allScores.filter(
+      (s) => s.play_date >= w.start_date && s.play_date <= endDate
+    );
+    const standings = computeStandings(players, scores, w.start_date, endDate);
+    return { week: w, standings, shareText: buildShareText(w, standings) };
+  });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">History</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+        History
+      </h1>
 
       {weeks.length === 0 ? (
-        <p className="text-black/60 dark:text-white/60">
+        <p className="text-zinc-400">
           No weeks finished yet &mdash; click &quot;End Week&quot; on the
           Dashboard once the week is done.
         </p>
       ) : (
-        <ol className="space-y-3">
-          {weeksWithShare.map(({ week: w, shareText }) => {
+        <ol className="space-y-4">
+          {weeksWithStats.map(({ week: w, standings, shareText }) => {
             const isNailBiter =
               w.margin !== null && w.margin <= NAIL_BITER_MARGIN;
+            const allNames =
+              standings?.map((s) => s.player.name).sort((a, b) => a.localeCompare(b)) ?? [];
             return (
               <li
                 key={w.id}
-                className="rounded-md border border-black/10 dark:border-white/10 px-4 py-3 space-y-2"
+                className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium">
+                  <span className="font-semibold text-zinc-100">
                     {formatDate(w.start_date)} &ndash;{" "}
                     {w.end_date ? formatDate(w.end_date) : "?"}
                   </span>
@@ -80,14 +94,15 @@ export default async function HistoryPage() {
                             name={w.winner_name}
                             avatarUrl={w.winner_avatar_url}
                             size={28}
+                            color={colorForKey(w.winner_name, allNames)}
                           />
-                          <span className="font-semibold">{w.winner_name}</span>
+                          <span className="font-semibold text-zinc-100">
+                            {w.winner_name}
+                          </span>
                           <span className="text-lg">🏆</span>
                         </>
                       ) : (
-                        <span className="text-black/50 dark:text-white/50">
-                          No winner
-                        </span>
+                        <span className="text-zinc-500">No winner</span>
                       )}
                     </span>
                     {shareText && <ShareWeekButton text={shareText} />}
@@ -111,6 +126,43 @@ export default async function HistoryPage() {
                         😬 Nail-biter finish
                       </span>
                     )}
+                  </div>
+                )}
+
+                {standings && standings.length > 0 && (
+                  <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                    {standings.map((s, i) => {
+                      const color = colorForKey(s.player.name, allNames);
+                      return (
+                        <div
+                          key={s.player.id}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="w-4 shrink-0 text-xs text-zinc-500">
+                              {i + 1}
+                            </span>
+                            <Avatar
+                              name={s.player.name}
+                              avatarUrl={s.player.avatar_url}
+                              size={22}
+                              color={color}
+                            />
+                            <span className="truncate font-medium text-zinc-200">
+                              {s.player.name}
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-3">
+                            <span className="hidden tracking-tight sm:inline">
+                              {s.daily.map((d) => tileEmoji(d.guesses)).join("")}
+                            </span>
+                            <span className="w-14 shrink-0 text-right text-zinc-400">
+                              {s.total} pts
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </li>
