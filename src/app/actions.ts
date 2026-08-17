@@ -11,6 +11,7 @@ import {
   getActivePlayers,
   getActiveWeek,
   getScoresForWeek,
+  getWeekBounds,
   todayStr,
 } from "@/lib/data";
 
@@ -153,14 +154,22 @@ export async function endWeek() {
   const scores = await getScoresForWeek(week.id);
   const today = todayStr();
 
-  const standings = computeStandings(players, scores, week.start_date, today);
+  // Weeks are always calendar Monday-Sunday -- finalize through that week's
+  // own Sunday (or today, if ending it early mid-week), never past it. If
+  // this week went unclosed for a while, `today` could already be deep into
+  // a later calendar week; without this bound the tally would wrongly pull
+  // in any days beyond the week actually being closed.
+  const { sunday } = getWeekBounds(week.start_date);
+  const through = today < sunday ? today : sunday;
+
+  const standings = computeStandings(players, scores, week.start_date, through);
   const winnerId = standings[0]?.player.id ?? null;
   const awards = computeWeekAwards(standings);
 
   const { error: closeError } = await supabase
     .from("weeks")
     .update({
-      end_date: today,
+      end_date: through,
       winner_player_id: winnerId,
       comeback_player_id: awards.comebackPlayerId,
       consistent_player_id: awards.consistentPlayerId,
@@ -170,8 +179,10 @@ export async function endWeek() {
     .eq("id", week.id);
   if (closeError) throw closeError;
 
+  // Next week always starts the Monday right after this one -- keeps the
+  // weeks table calendar-aligned even if this one was closed out late.
   const { error: createError } = await supabase.from("weeks").insert({
-    start_date: addDays(today, 1),
+    start_date: addDays(sunday, 1),
   });
   if (createError) throw createError;
 
